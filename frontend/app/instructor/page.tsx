@@ -36,7 +36,7 @@ export default function InstructorDashboard() {
 
   const fetchSchedules = useCallback(async () => {
     try {
-      const res = await fetch('http://localhost:3003/schedules/status');
+      const res = await fetch('http://localhost:3003/api/v1/schedules/status');
       if (!res.ok) throw new Error('Failed to fetch');
       const data: RoomStatusResponse[] = await res.json();
       
@@ -88,7 +88,7 @@ export default function InstructorDashboard() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('http://localhost:3003/schedules', {
+      const res = await fetch('http://localhost:3003/api/v1/schedules', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -125,7 +125,7 @@ export default function InstructorDashboard() {
     if (!confirm(`ต้องการลบวิชา ${courseCode} ออกจากระบบใช่หรือไม่?`)) return;
 
     try {
-      const res = await fetch(`http://localhost:3003/schedules/${id}`, {
+      const res = await fetch(`http://localhost:3003/api/v1/schedules/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

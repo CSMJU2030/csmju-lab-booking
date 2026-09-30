@@ -1,0 +1,110 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+
+  @@map("day_of_week")
+}
+
+enum ReservationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+
+  @@map("reservation_status")
+}
+
+model Room {
+  id       String  @id @default(uuid())
+  name     String  @unique
+  building String?
+
+  reservations  Reservation[]
+  roomSchedules RoomSchedule[]
+
+  @@map("rooms")
+}
+
+model Course {
+  id     String @id @default(uuid())
+  code   String @unique
+  nameTh String @map("name_th")
+  credit String
+
+  sections Section[]
+
+  @@map("courses")
+}
+
+model Section {
+  id          String   @id @default(uuid())
+  sectionNo   Int      @map("section_no")
+  instructors String[]
+  capacity    Int
+  enrolled    Int
+  status      String   @default("W")
+  courseId    String?  @map("course_id")
+
+  course Course? @relation(fields: [courseId], references: [id])
+
+  @@map("sections")
+}
+
+model Schedule {
+  id             String    @id @default(uuid())
+  instructorName String    @map("instructor_name")
+  courseCode     String    @map("course_code")
+  courseName     String    @map("course_name")
+  roomName       String    @map("room_name")
+  day            DayOfWeek @default(MONDAY)
+  startTime      DateTime  @map("start_time") @db.Time(6)
+  endTime        DateTime  @map("end_time") @db.Time(6)
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@map("schedules")
+}
+
+model RoomSchedule {
+  id           String   @id @default(uuid())
+  roomId       String   @map("room_id")
+  dayOfWeek    Int      @map("day_of_week")
+  startTime    DateTime @map("start_time") @db.Time(6)
+  endTime      DateTime @map("end_time") @db.Time(6)
+  subjectName  String?  @map("subject_name")
+  academicYear String?  @map("academic_year")
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("room_schedules")
+}
+
+model Reservation {
+  id          String            @id @default(uuid())
+  coreUserId  String            @map("core_user_id")
+  roomId      String            @map("room_id")
+  bookingDate DateTime          @map("booking_date") @db.Date
+  startTime   DateTime          @map("start_time") @db.Time(6)
+  endTime     DateTime          @map("end_time") @db.Time(6)
+  purpose     String
+  status      ReservationStatus @default(PENDING)
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("reservations")
+}

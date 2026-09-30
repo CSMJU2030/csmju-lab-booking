@@ -1,25 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Schedule, DayOfWeek } from '../entities/schedule.entity';
+import { PrismaService } from '../prisma/prisma.service';
+import { DayOfWeek } from '../generated/prisma/client';
+import { fromTimeDate } from '../prisma/time.util';
 
 @Injectable()
 export class RoomsService {
-  constructor(
-    @InjectRepository(Schedule)
-    private readonly scheduleRepository: Repository<Schedule>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async checkScheduleConflict(
     roomName: string,
     day: DayOfWeek,
     excludeScheduleId?: string,
   ) {
-    const schedules = await this.scheduleRepository.find({
-      where: {
-        roomName,
-        day,
-      },
+    const schedules = await this.prisma.schedule.findMany({
+      where: { roomName, day },
     });
 
     for (const schedule of schedules) {
@@ -31,6 +25,10 @@ export class RoomsService {
       }
     }
 
-    return schedules;
+    return schedules.map((s) => ({
+      ...s,
+      startTime: fromTimeDate(s.startTime),
+      endTime: fromTimeDate(s.endTime),
+    }));
   }
 }

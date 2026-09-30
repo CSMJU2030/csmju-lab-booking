@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
-import { DayOfWeek } from '../entities/schedule.entity';
+import { DayOfWeek } from '../generated/prisma/client';
 
 @Controller('rooms')
 export class RoomsController {

@@ -1,6 +1,5 @@
 import { Controller, Get, Post, Delete, Body, Param } from '@nestjs/common';
-import { SchedulesService } from './schedules.service';
-import { Schedule } from '../entities/schedule.entity';
+import { SchedulesService, Schedule } from './schedules.service';
 
 @Controller('schedules')
 export class SchedulesController {

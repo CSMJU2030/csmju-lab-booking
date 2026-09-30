@@ -1,17 +1,16 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Reservation, ReservationStatus } from '../entities/reservation.entity';
-import { RoomSchedule } from '../entities/room-schedule.entity';
+import { PrismaService } from '../prisma/prisma.service';
+import { ReservationStatus } from '../generated/prisma/client';
+import {
+  fromDateOnly,
+  fromTimeDate,
+  toDateOnly,
+  toTimeDate,
+} from '../prisma/time.util';
 
 @Injectable()
 export class ReservationsService {
-  constructor(
-    @InjectRepository(Reservation)
-    private reservationRepo: Repository<Reservation>,
-    @InjectRepository(RoomSchedule)
-    private scheduleRepo: Repository<RoomSchedule>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async createBooking(dto: {
     core_user_id: string;
@@ -21,19 +20,20 @@ export class ReservationsService {
     endTime: string;
     purpose: string;
   }) {
-    const { roomId, bookingDate, startTime, endTime } = dto;
+    const { roomId, bookingDate } = dto;
+    const startTime = toTimeDate(dto.startTime);
+    const endTime = toTimeDate(dto.endTime);
     const dayOfWeek = new Date(bookingDate).getDay();
 
     // 1. เช็กตารางเรียนประจำ (วันเดียวกับ dayOfWeek และช่วงเวลาคาบเกี่ยวกัน)
-    const isScheduleConflict = await this.scheduleRepo
-      .createQueryBuilder('sch')
-      .where('sch.room_id = :roomId', { roomId })
-      .andWhere('sch.dayOfWeek = :dayOfWeek', { dayOfWeek })
-      .andWhere('sch.startTime < :endTime AND sch.endTime > :startTime', {
-        startTime,
-        endTime,
-      })
-      .getOne();
+    const isScheduleConflict = await this.prisma.roomSchedule.findFirst({
+      where: {
+        roomId,
+        dayOfWeek,
+        startTime: { lt: endTime },
+        endTime: { gt: startTime },
+      },
+    });
 
     if (isScheduleConflict) {
       throw new BadRequestException(
@@ -42,18 +42,17 @@ export class ReservationsService {
     }
 
     // 2. เช็กการจองที่มีอยู่แล้วในวันนั้น
-    const isBookingConflict = await this.reservationRepo
-      .createQueryBuilder('res')
-      .where('res.room_id = :roomId', { roomId })
-      .andWhere('res.bookingDate = :bookingDate', { bookingDate })
-      .andWhere('res.status IN (:...statuses)', {
-        statuses: [ReservationStatus.PENDING, ReservationStatus.APPROVED],
-      })
-      .andWhere('res.startTime < :endTime AND res.endTime > :startTime', {
-        startTime,
-        endTime,
-      })
-      .getOne();
+    const isBookingConflict = await this.prisma.reservation.findFirst({
+      where: {
+        roomId,
+        bookingDate: toDateOnly(bookingDate),
+        status: {
+          in: [ReservationStatus.PENDING, ReservationStatus.APPROVED],
+        },
+        startTime: { lt: endTime },
+        endTime: { gt: startTime },
+      },
+    });
 
     if (isBookingConflict) {
       throw new BadRequestException(
@@ -62,19 +61,35 @@ export class ReservationsService {
     }
 
     // 3. บันทึกการจอง
-    const reservation = this.reservationRepo.create({
-      core_user_id: dto.core_user_id,
-      room: { id: roomId },
-      bookingDate,
-      startTime,
-      endTime,
-      purpose: dto.purpose,
+    const saved = await this.prisma.reservation.create({
+      data: {
+        coreUserId: dto.core_user_id,
+        roomId,
+        bookingDate: toDateOnly(bookingDate),
+        startTime,
+        endTime,
+        purpose: dto.purpose,
+      },
     });
 
-    return this.reservationRepo.save(reservation);
+    return this.serialize(saved);
   }
 
-  findAll() {
-    return this.reservationRepo.find({ relations: { room: true } });
+  async findAll() {
+    const rows = await this.prisma.reservation.findMany({
+      include: { room: true },
+    });
+    return rows.map((r) => this.serialize(r));
+  }
+
+  private serialize<
+    T extends { bookingDate: Date; startTime: Date; endTime: Date },
+  >(row: T) {
+    return {
+      ...row,
+      bookingDate: fromDateOnly(row.bookingDate),
+      startTime: fromTimeDate(row.startTime),
+      endTime: fromTimeDate(row.endTime),
+    };
   }
 }

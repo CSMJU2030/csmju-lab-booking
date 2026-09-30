@@ -56,7 +56,7 @@ export default function Home() {
 
     const getRoomStatus = async () => {
       try {
-        const res = await fetch('http://localhost:3003/schedules/status');
+        const res = await fetch('http://localhost:3003/api/v1/schedules/status');
         if (!res.ok) throw new Error('Network response was not ok');
         const data = await res.json();
         
@@ -100,7 +100,7 @@ export default function Home() {
   const handleReload = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3003/schedules/status');
+      const res = await fetch('http://localhost:3003/api/v1/schedules/status');
       if (!res.ok) throw new Error('Network response was not ok');
       const data = await res.json();
       const updatedRooms = Array.isArray(data) ? data : [];
