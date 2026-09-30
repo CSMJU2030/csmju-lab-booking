@@ -1,0 +1,4 @@
+allowBuilds:
+  '@parcel/watcher': false
+  sqlite3: set this to true or false
+  unrs-resolver: false

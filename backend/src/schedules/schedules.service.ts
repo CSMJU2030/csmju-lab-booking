@@ -1,24 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { DayOfWeek, Prisma } from '../../generated/prisma/client';
-import { AppException } from '../common/errors';
-import { PrismaService } from '../prisma/prisma.service';
-import { fromTimeDate, toTimeDate } from '../prisma/time.util';
-import { CreateScheduleDto } from './dto/create-schedule.dto';
-import { QuerySchedulesDto } from './dto/query-schedules.dto';
-
-// รูปแบบที่ API ส่งออก — เวลาเป็น string "HH:MM:SS"
-export interface Schedule {
-  id: string;
-  instructorName: string;
-  courseCode: string;
-  courseName: string;
-  roomName: string;
-  day: DayOfWeek;
-  startTime: string;
-  endTime: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Schedule } from '../entities/schedule.entity';
 
 export interface RoomStatusResult {
   roomName: string;
@@ -44,68 +27,24 @@ export interface RoomStatusResult {
 
 @Injectable()
 export class SchedulesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(Schedule)
+    private readonly scheduleRepository: Repository<Schedule>,
+  ) {}
 
-  private toSchedule(
-    row: { startTime: Date; endTime: Date } & Omit<
-      Schedule,
-      'startTime' | 'endTime'
-    >,
-  ): Schedule {
-    return {
-      ...row,
-      startTime: fromTimeDate(row.startTime),
-      endTime: fromTimeDate(row.endTime),
-    };
+  async createSchedule(data: Partial<Schedule>): Promise<Schedule> {
+    const newSchedule = this.scheduleRepository.create(data);
+    return await this.scheduleRepository.save(newSchedule);
   }
 
-  async createSchedule(dto: CreateScheduleDto): Promise<Schedule> {
-    const startTime = toTimeDate(dto.startTime);
-    const endTime = toTimeDate(dto.endTime);
-    if (startTime >= endTime) {
-      throw AppException.badRequest('startTime must be earlier than endTime');
-    }
-
-    const created = await this.prisma.schedule.create({
-      data: {
-        instructorName: dto.instructorName,
-        courseCode: dto.courseCode,
-        courseName: dto.courseName,
-        roomName: dto.roomName,
-        day: dto.day,
-        startTime,
-        endTime,
-      },
+  async getAllSchedules(): Promise<Schedule[]> {
+    return await this.scheduleRepository.find({
+      order: { startTime: 'ASC' },
     });
-    return this.toSchedule(created);
   }
 
-  async getAllSchedules(
-    query: QuerySchedulesDto,
-  ): Promise<{ items: Schedule[]; total: number }> {
-    const where: Prisma.ScheduleWhereInput = {
-      ...(query.roomName ? { roomName: query.roomName } : {}),
-      ...(query.day ? { day: query.day } : {}),
-    };
-    const [rows, total] = await Promise.all([
-      this.prisma.schedule.findMany({
-        where,
-        orderBy: { startTime: 'asc' },
-        skip: query.skip,
-        take: query.take,
-      }),
-      this.prisma.schedule.count({ where }),
-    ]);
-    return { items: rows.map((r) => this.toSchedule(r)), total };
-  }
-
-  async deleteSchedule(id: string): Promise<{ id: string; deleted: true }> {
-    const existing = await this.prisma.schedule.findUnique({ where: { id } });
-    if (!existing) {
-      throw AppException.notFound('Schedule not found');
-    }
-    await this.prisma.schedule.delete({ where: { id } });
-    return { id, deleted: true };
+  async deleteSchedule(id: string): Promise<void> {
+    await this.scheduleRepository.delete(id);
   }
 
   async getRoomStatuses(): Promise<RoomStatusResult[]> {
@@ -116,12 +55,10 @@ export class SchedulesService {
     const result: RoomStatusResult[] = [];
 
     for (const roomName of roomNames) {
-      const schedules = (
-        await this.prisma.schedule.findMany({
-          where: { roomName },
-          orderBy: { startTime: 'asc' },
-        })
-      ).map((r) => this.toSchedule(r));
+      const schedules = await this.scheduleRepository.find({
+        where: { roomName },
+        order: { startTime: 'ASC' },
+      });
 
       let currentClass: RoomStatusResult['currentClass'] = null;
       let nextClass: RoomStatusResult['nextClass'] = null;
@@ -159,7 +96,7 @@ export class SchedulesService {
         }
       }
 
-      result.push({
+    result.push({
         roomName,
         isOccupied: Boolean(currentClass),
         statusColor: currentClass ? 'red' : 'green',
