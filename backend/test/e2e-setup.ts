@@ -33,3 +33,7 @@ for (const layer of ['IP', 'USER']) {
   process.env[`THROTTLE_${layer}_BURST_LIMIT`] = '100000';
   process.env[`THROTTLE_${layer}_SUSTAINED_LIMIT`] = '100000';
 }
+
+// A developer's backend/.env may set LOCAL_TEST_ROLE (no Core Hub); the suites must always
+// exercise the real token guard. An empty value still counts as set, so .env cannot override it.
+process.env.LOCAL_TEST_ROLE = '';
