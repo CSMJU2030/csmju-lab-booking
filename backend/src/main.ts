@@ -4,8 +4,8 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // กำหนด Global Prefix ตามมาตรฐานของรายวิชา
-  app.setGlobalPrefix('api');
+  // กำหนด Global Prefix เป็น api/v1 ตามมาตรฐานรายวิชา
+  app.setGlobalPrefix('api/v1');
 
   // เปิดให้ Frontend (Next.js) เรียกใช้งาน API ได้
   app.enableCors();
