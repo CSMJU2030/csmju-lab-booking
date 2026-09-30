@@ -6,7 +6,25 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  getHello() {
+    return {
+      success: true,
+      data: {
+        message: this.appService.getHello(),
+      },
+      meta: {},
+    };
+  }
+
+  @Get('health')
+  getHealth() {
+    return {
+      success: true,
+      data: {
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+      },
+      meta: {},
+    };
   }
 }

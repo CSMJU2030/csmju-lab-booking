@@ -14,7 +14,7 @@ export class ReservationsService {
   ) {}
 
   async createBooking(dto: {
-    userId: string;
+    core_user_id: string;
     roomId: string;
     bookingDate: string;
     startTime: string;
@@ -63,7 +63,7 @@ export class ReservationsService {
 
     // 3. บันทึกการจอง
     const reservation = this.reservationRepo.create({
-      userId: dto.userId,
+      core_user_id: dto.core_user_id,
       room: { id: roomId },
       bookingDate,
       startTime,

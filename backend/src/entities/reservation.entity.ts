@@ -21,7 +21,7 @@ export class Reservation {
   id!: string;
 
   @Column()
-  userId!: string;
+  core_user_id!: string;
 
   @ManyToOne(() => Room, 'reservations', {
     onDelete: 'CASCADE',
