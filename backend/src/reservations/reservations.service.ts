@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ReservationStatus } from '../generated/prisma/client';
+import { ReservationStatus } from '../../generated/prisma/client';
 import {
   fromDateOnly,
   fromTimeDate,

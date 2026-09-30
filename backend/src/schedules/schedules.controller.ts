@@ -1,27 +1,54 @@
-import { Controller, Get, Post, Delete, Body, Param } from '@nestjs/common';
-import { SchedulesService, Schedule } from './schedules.service';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
+import { Permission } from '../auth/permissions';
+import { CollectionResult } from '../common/api-response';
+import { buildPaginationMeta } from '../common/dto/pagination.dto';
+import { CreateScheduleDto } from './dto/create-schedule.dto';
+import { QuerySchedulesDto } from './dto/query-schedules.dto';
+import { SchedulesService } from './schedules.service';
 
-@Controller('schedules')
+@Controller('v1/schedules')
 export class SchedulesController {
   constructor(private readonly schedulesService: SchedulesService) {}
 
   @Post()
-  async create(@Body() body: Partial<Schedule>): Promise<Schedule> {
-    return await this.schedulesService.createSchedule(body);
+  @RequirePermissions(Permission.SCHEDULE_CREATE)
+  create(@Body() dto: CreateScheduleDto) {
+    return this.schedulesService.createSchedule(dto);
   }
 
   @Get()
-  async findAll(): Promise<Schedule[]> {
-    return await this.schedulesService.getAllSchedules();
+  @RequirePermissions(Permission.SCHEDULE_READ)
+  async findAll(@Query() query: QuerySchedulesDto) {
+    const { items, total } = await this.schedulesService.getAllSchedules(query);
+    return new CollectionResult(
+      items,
+      buildPaginationMeta(total, query.page ?? 1, query.take),
+    );
   }
 
   @Get('status')
+  @RequirePermissions(Permission.SCHEDULE_READ)
   async getStatus() {
-    return await this.schedulesService.getRoomStatuses();
+    const rooms = await this.schedulesService.getRoomStatuses();
+    return new CollectionResult(
+      rooms,
+      buildPaginationMeta(rooms.length, 1, rooms.length),
+    );
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.schedulesService.deleteSchedule(id);
+  @RequirePermissions(Permission.SCHEDULE_DELETE)
+  remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.schedulesService.deleteSchedule(id);
   }
 }

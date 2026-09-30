@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { DayOfWeek, Prisma } from '../../generated/prisma/client';
+import { AppException } from '../common/errors';
 import { PrismaService } from '../prisma/prisma.service';
-import { DayOfWeek } from '../generated/prisma/client';
 import { fromTimeDate, toTimeDate } from '../prisma/time.util';
+import { CreateScheduleDto } from './dto/create-schedule.dto';
+import { QuerySchedulesDto } from './dto/query-schedules.dto';
 
-// รูปแบบที่ API ส่งออก/รับเข้า — เวลาเป็น string "HH:MM:SS" เหมือนเดิม
+// รูปแบบที่ API ส่งออก — เวลาเป็น string "HH:MM:SS"
 export interface Schedule {
   id: string;
   instructorName: string;
@@ -14,6 +17,7 @@ export interface Schedule {
   startTime: string;
   endTime: string;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface RoomStatusResult {
@@ -55,30 +59,53 @@ export class SchedulesService {
     };
   }
 
-  async createSchedule(data: Partial<Schedule>): Promise<Schedule> {
+  async createSchedule(dto: CreateScheduleDto): Promise<Schedule> {
+    const startTime = toTimeDate(dto.startTime);
+    const endTime = toTimeDate(dto.endTime);
+    if (startTime >= endTime) {
+      throw AppException.badRequest('startTime must be earlier than endTime');
+    }
+
     const created = await this.prisma.schedule.create({
       data: {
-        instructorName: data.instructorName as string,
-        courseCode: data.courseCode as string,
-        courseName: data.courseName as string,
-        roomName: data.roomName as string,
-        day: data.day,
-        startTime: toTimeDate(data.startTime as string),
-        endTime: toTimeDate(data.endTime as string),
+        instructorName: dto.instructorName,
+        courseCode: dto.courseCode,
+        courseName: dto.courseName,
+        roomName: dto.roomName,
+        day: dto.day,
+        startTime,
+        endTime,
       },
     });
     return this.toSchedule(created);
   }
 
-  async getAllSchedules(): Promise<Schedule[]> {
-    const rows = await this.prisma.schedule.findMany({
-      orderBy: { startTime: 'asc' },
-    });
-    return rows.map((r) => this.toSchedule(r));
+  async getAllSchedules(
+    query: QuerySchedulesDto,
+  ): Promise<{ items: Schedule[]; total: number }> {
+    const where: Prisma.ScheduleWhereInput = {
+      ...(query.roomName ? { roomName: query.roomName } : {}),
+      ...(query.day ? { day: query.day } : {}),
+    };
+    const [rows, total] = await Promise.all([
+      this.prisma.schedule.findMany({
+        where,
+        orderBy: { startTime: 'asc' },
+        skip: query.skip,
+        take: query.take,
+      }),
+      this.prisma.schedule.count({ where }),
+    ]);
+    return { items: rows.map((r) => this.toSchedule(r)), total };
   }
 
-  async deleteSchedule(id: string): Promise<void> {
-    await this.prisma.schedule.deleteMany({ where: { id } });
+  async deleteSchedule(id: string): Promise<{ id: string; deleted: true }> {
+    const existing = await this.prisma.schedule.findUnique({ where: { id } });
+    if (!existing) {
+      throw AppException.notFound('Schedule not found');
+    }
+    await this.prisma.schedule.delete({ where: { id } });
+    return { id, deleted: true };
   }
 
   async getRoomStatuses(): Promise<RoomStatusResult[]> {

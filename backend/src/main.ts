@@ -1,22 +1,41 @@
+import 'reflect-metadata';
+import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { ROUTES_OUTSIDE_API_PREFIX, configureApp } from './app-setup';
 import { AppModule } from './app.module';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+async function bootstrap(): Promise<void> {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: false,
+  });
+  const config = app.get(ConfigService);
 
-  // กำหนด Global Prefix เป็น api/v1 ตามมาตรฐานรายวิชา
-  app.setGlobalPrefix('api/v1');
+  // /api/health and /api/v1/... (spec §20-§21); the SSO endpoints stay at the root.
+  app.setGlobalPrefix('api', { exclude: ROUTES_OUTSIDE_API_PREFIX });
 
-  // เปิดให้ Frontend (Next.js) เรียกใช้งาน API ได้
-  app.enableCors();
+  // Trust proxy and validation - shared with the e2e suites.
+  configureApp(app);
 
-  // กำหนดให้ใช้ PORT จากไฟล์ .env ถ้าไม่มีให้ใช้ 3003 เป็นค่าเริ่มต้น
-  const port = process.env.PORT ?? 3003;
+  app.enableShutdownHooks();
+
+  const port = config.get<number>('port', 3003);
   await app.listen(port);
-  console.log(`Subsystem Backend is running on: http://localhost:${port}`);
+
+  const logger = new Logger('Bootstrap');
+  logger.log(
+    JSON.stringify({
+      event: 'subsystem.started',
+      subsystem: config.get<string>('subsystemId'),
+      port,
+      coreHubUrl: config.get<string>('coreHub.url'),
+      coreHubWebUrl: config.get<string>('coreHub.webUrl'),
+      jwksUrl: config.get<string>('coreHub.jwksUrl'),
+      issuer: config.get<string>('coreHub.issuer'),
+      audience: config.get<string>('coreHub.audience'),
+    }),
+  );
 }
 
-void bootstrap().catch((error) => {
-  console.error('Failed to start the application:', error);
-  process.exit(1);
-});
+void bootstrap();

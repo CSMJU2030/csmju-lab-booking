@@ -1,0 +1,85 @@
+# Lab Booking runs its own API and its own PostgreSQL instance.
+# It never connects to the Core Hub database - only to the Core Hub JWKS URL.
+services:
+  lab-booking-db:
+    image: postgres:16-alpine
+    container_name: lab-booking-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lab_booking_db
+    ports:
+      # 5434 on the host so it cannot collide with a Core Hub database on 5432
+      - '5434:5432'
+    volumes:
+      - lab-booking-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d lab_booking_db']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  lab-booking-api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: lab-booking-api
+    restart: unless-stopped
+    depends_on:
+      lab-booking-db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3003
+      DATABASE_URL: postgresql://postgres:postgres@lab-booking-db:5432/lab_booking_db
+      # The Core Hub usually runs on the host machine during the demo.
+      CORE_HUB_URL: ${CORE_HUB_URL:-http://host.docker.internal:3000}
+      CORE_HUB_JWKS_URL: ${CORE_HUB_JWKS_URL:-http://host.docker.internal:3000/api/v1/.well-known/jwks.json}
+      CORE_HUB_ISSUER: ${CORE_HUB_ISSUER:-core-hub}
+      CORE_HUB_AUDIENCE: ${CORE_HUB_AUDIENCE:-csmju2030}
+      SUBSYSTEM_ID: ${SUBSYSTEM_ID:-csmju-lab-booking}
+      SUBSYSTEM_NAME: ${SUBSYSTEM_NAME:-CSMJU Lab Booking}
+      # Central SSO: /auth/login sends the BROWSER here, so this is the address
+      # the browser uses - never a Docker-internal name like core-hub-web.
+      CORE_HUB_WEB_URL: ${CORE_HUB_WEB_URL:-http://localhost:3100}
+      SSO_STATE_TTL_SEC: ${SSO_STATE_TTL_SEC:-600}
+      SSO_POST_LOGIN_REDIRECT: ${SSO_POST_LOGIN_REDIRECT:-/api/v1/me}
+      # Empty because the API port is published directly with no proxy in front.
+      # Behind Cloudflare on the dev server: loopback, uniquelocal
+      TRUST_PROXY: ${TRUST_PROXY:-}
+      # Rate limit layer 1: per address, before the token is checked
+      THROTTLE_IP_BURST_TTL_MS: ${THROTTLE_IP_BURST_TTL_MS:-10000}
+      THROTTLE_IP_BURST_LIMIT: ${THROTTLE_IP_BURST_LIMIT:-600}
+      THROTTLE_IP_SUSTAINED_TTL_MS: ${THROTTLE_IP_SUSTAINED_TTL_MS:-60000}
+      THROTTLE_IP_SUSTAINED_LIMIT: ${THROTTLE_IP_SUSTAINED_LIMIT:-3000}
+      # Rate limit layer 2: per verified user, after the token is checked
+      THROTTLE_USER_BURST_TTL_MS: ${THROTTLE_USER_BURST_TTL_MS:-10000}
+      THROTTLE_USER_BURST_LIMIT: ${THROTTLE_USER_BURST_LIMIT:-100}
+      THROTTLE_USER_SUSTAINED_TTL_MS: ${THROTTLE_USER_SUSTAINED_TTL_MS:-60000}
+      THROTTLE_USER_SUSTAINED_LIMIT: ${THROTTLE_USER_SUSTAINED_LIMIT:-600}
+      # Database pool and timeout ceilings
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+      DATABASE_CONNECT_TIMEOUT_MS: ${DATABASE_CONNECT_TIMEOUT_MS:-5000}
+      DATABASE_STATEMENT_TIMEOUT_MS: ${DATABASE_STATEMENT_TIMEOUT_MS:-5000}
+      DATABASE_IDLE_IN_TRANSACTION_TIMEOUT_MS: ${DATABASE_IDLE_IN_TRANSACTION_TIMEOUT_MS:-10000}
+    ports:
+      - '3003:3003'
+    extra_hosts:
+      # Lets the container reach a Core Hub running on the host (Linux support)
+      - 'host.docker.internal:host-gateway'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3003/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  lab-booking-db-data:

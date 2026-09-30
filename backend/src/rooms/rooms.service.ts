@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { DayOfWeek } from '../generated/prisma/client';
+import { DayOfWeek } from '../../generated/prisma/client';
 import { fromTimeDate } from '../prisma/time.util';
 
 @Injectable()

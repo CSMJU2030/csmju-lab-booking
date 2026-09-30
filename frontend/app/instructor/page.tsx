@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { api } from '../lib/api';
 
 interface CourseSchedule {
   id: string;
@@ -36,10 +37,10 @@ export default function InstructorDashboard() {
 
   const fetchSchedules = useCallback(async () => {
     try {
-      const res = await fetch('http://localhost:3003/api/v1/schedules/status');
-      if (!res.ok) throw new Error('Failed to fetch');
-      const data: RoomStatusResponse[] = await res.json();
-      
+      const result = await api<RoomStatusResponse[]>('/api/v1/schedules/status');
+      if (!result.ok) throw new Error(result.message);
+      const data = result.data;
+
       const allSch: CourseSchedule[] = [];
       if (Array.isArray(data)) {
         data.forEach((room) => {
@@ -88,13 +89,9 @@ export default function InstructorDashboard() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('http://localhost:3003/api/v1/schedules', {
+      const res = await api('/api/v1/schedules', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-user-role': 'INSTRUCTOR',
-        },
-        body: JSON.stringify(formData),
+        body: formData,
       });
 
       if (res.ok) {
@@ -110,8 +107,7 @@ export default function InstructorDashboard() {
         });
         await refreshSchedules();
       } else {
-        const errorData = await res.json().catch(() => ({}));
-        alert(`❌ เกิดข้อผิดพลาด: ${errorData.message || res.statusText}`);
+        alert(`❌ เกิดข้อผิดพลาด: ${res.message}`);
       }
     } catch (err) {
       console.error(err);
@@ -125,20 +121,15 @@ export default function InstructorDashboard() {
     if (!confirm(`ต้องการลบวิชา ${courseCode} ออกจากระบบใช่หรือไม่?`)) return;
 
     try {
-      const res = await fetch(`http://localhost:3003/api/v1/schedules/${id}`, {
+      const res = await api(`/api/v1/schedules/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-role': 'INSTRUCTOR',
-        },
       });
 
       if (res.ok) {
         alert('🗑️ ลบตารางวิชาเรียบร้อยแล้ว');
         await refreshSchedules();
       } else {
-        const errorData = await res.json().catch(() => ({}));
-        alert(`❌ ไม่สามารถลบได้: ${errorData.message || 'สิทธิ์ไม่เพียงพอ'}`);
+        alert(`❌ ไม่สามารถลบได้: ${res.message}`);
       }
     } catch (err) {
       console.error(err);
@@ -149,7 +140,7 @@ export default function InstructorDashboard() {
   return (
     <main className="min-h-screen bg-slate-100 p-4 sm:p-8 text-slate-900">
       <div className="max-w-4xl mx-auto">
-        
+
         <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
@@ -170,7 +161,7 @@ export default function InstructorDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit">
             <h2 className="text-base font-bold text-slate-800 mb-4">➕ เพิ่มตารางเรียนใหม่</h2>
-            
+
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">ชื่อผู้สอน</label>

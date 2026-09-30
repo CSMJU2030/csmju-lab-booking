@@ -1,6 +1,6 @@
 generator client {
   provider     = "prisma-client"
-  output       = "../src/generated/prisma"
+  output       = "../generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -33,6 +33,8 @@ model Room {
   id       String  @id @default(uuid())
   name     String  @unique
   building String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   reservations  Reservation[]
   roomSchedules RoomSchedule[]
@@ -45,6 +47,8 @@ model Course {
   code   String @unique
   nameTh String @map("name_th")
   credit String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   sections Section[]
 
@@ -59,6 +63,8 @@ model Section {
   enrolled    Int
   status      String   @default("W")
   courseId    String?  @map("course_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
   course Course? @relation(fields: [courseId], references: [id])
 
@@ -75,6 +81,7 @@ model Schedule {
   startTime      DateTime  @map("start_time") @db.Time(6)
   endTime        DateTime  @map("end_time") @db.Time(6)
   createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
 
   @@map("schedules")
 }
@@ -87,6 +94,8 @@ model RoomSchedule {
   endTime      DateTime @map("end_time") @db.Time(6)
   subjectName  String?  @map("subject_name")
   academicYear String?  @map("academic_year")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
@@ -103,6 +112,7 @@ model Reservation {
   purpose     String
   status      ReservationStatus @default(PENDING)
   createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @default(now()) @updatedAt @map("updated_at")
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 

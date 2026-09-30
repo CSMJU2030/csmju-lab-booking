@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { api } from './lib/api';
 
 interface CourseSchedule {
   id: string;
@@ -50,15 +51,15 @@ export default function Home() {
   const [peopleInput, setPeopleInput] = useState<number>(1);
   const [showMyBookingsModal, setShowMyBookingsModal] = useState(false);
 
-  // ดึงข้อมูลสถานะห้องจาก Backend (พอร์ต 3003)
+  // ดึงข้อมูลสถานะห้องจาก Backend (ผ่าน proxy ของ frontend)
   useEffect(() => {
     let isMounted = true;
 
     const getRoomStatus = async () => {
       try {
-        const res = await fetch('http://localhost:3003/api/v1/schedules/status');
-        if (!res.ok) throw new Error('Network response was not ok');
-        const data = await res.json();
+        const result = await api<RoomStatus[]>('/api/v1/schedules/status');
+        if (!result.ok) throw new Error(result.message);
+        const data = result.data;
         
         if (isMounted) {
           const updatedRooms = Array.isArray(data) ? data : [];
@@ -100,9 +101,9 @@ export default function Home() {
   const handleReload = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3003/api/v1/schedules/status');
-      if (!res.ok) throw new Error('Network response was not ok');
-      const data = await res.json();
+      const result = await api<RoomStatus[]>('/api/v1/schedules/status');
+      if (!result.ok) throw new Error(result.message);
+      const data = result.data;
       const updatedRooms = Array.isArray(data) ? data : [];
       
       const activeRooms = updatedRooms.filter(
