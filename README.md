@@ -43,6 +43,12 @@ pnpm --filter backend exec prisma migrate deploy
 pnpm --filter backend prisma:seed             # ข้อมูลตัวอย่าง (ห้อง)
 ```
 
+### รันโดยยังไม่มี Core Hub (โหมดทดสอบชั่วคราว)
+
+ใส่ `LOCAL_TEST_ROLE=staff` ใน `backend/.env` (หรือ `student` เพื่อดูอย่างเดียว) แล้ว restart backend
+ทุก request จะเป็นผู้ใช้ทดสอบคนเดียว ไม่ตรวจ token — production ตั้งไม่ได้ (บูตไม่ขึ้น) และเปิดไว้จะไม่ผ่าน conformance
+ต่อ Core Hub จริง: ลบตัวแปรนี้ ลบโฟลเดอร์ `backend/src/dev/` และบรรทัดที่อ้างถึงใน `app.module.ts` กับ `env.validation.ts`
+
 ### รัน
 
 ```bash

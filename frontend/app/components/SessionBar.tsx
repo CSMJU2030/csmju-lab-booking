@@ -24,16 +24,25 @@ export default function SessionBar() {
 
   if (!me) return null;
 
+  // LOCAL_TEST_ROLE on the backend: no Core Hub, so there is nothing to sign out of.
+  const isLocalTest = me.email.endsWith('@localhost');
+
   return (
     <div className="flex items-center justify-end gap-3 bg-slate-900 px-4 py-2 text-xs text-slate-200">
       <span>
         {me.email} · {me.subsystemRole}
       </span>
-      <form method="post" action="/auth/logout">
-        <button type="submit" className="rounded bg-slate-700 px-2 py-1 hover:bg-slate-600">
-          ออกจากระบบ
-        </button>
-      </form>
+      {isLocalTest ? (
+        <span className="rounded bg-amber-500 px-2 py-1 font-semibold text-slate-900">
+          โหมดทดสอบ (ไม่มี Core Hub)
+        </span>
+      ) : (
+        <form method="post" action="/auth/logout">
+          <button type="submit" className="rounded bg-slate-700 px-2 py-1 hover:bg-slate-600">
+            ออกจากระบบ
+          </button>
+        </form>
+      )}
     </div>
   );
 }

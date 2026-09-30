@@ -13,6 +13,7 @@ import {
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import configuration from './config/configuration';
 import { validateEnv } from './config/env.validation';
+import { LocalIdentityGuard } from './dev/local-identity.guard';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReservationsModule } from './reservations/reservations.module';
@@ -39,7 +40,11 @@ import { SchedulesModule } from './schedules/schedules.module';
     // 1. Per-address rate limit, before any signature is checked.
     { provide: APP_GUARD, useClass: IpThrottlerGuard },
     // 2. Every route is authenticated unless explicitly marked @Public().
-    { provide: APP_GUARD, useClass: CoreHubJwtGuard },
+    // (LOCAL_TEST_ROLE swaps in a fixed test user - see src/dev/local-identity.guard.ts)
+    {
+      provide: APP_GUARD,
+      useClass: process.env.LOCAL_TEST_ROLE?.trim() ? LocalIdentityGuard : CoreHubJwtGuard,
+    },
     // 3. Per-user rate limit, now that the caller is known.
     { provide: APP_GUARD, useClass: UserThrottlerGuard },
     // 4. Authorization runs after authentication.

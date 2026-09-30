@@ -17,6 +17,10 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
+  if (isProduction && String(config.LOCAL_TEST_ROLE ?? '').trim() !== '') {
+    throw new Error('LOCAL_TEST_ROLE must not be set in production');
+  }
+
   const jwksUrl = String(config.CORE_HUB_JWKS_URL ?? '');
   if (isProduction && jwksUrl.startsWith('http://')) {
     throw new Error('CORE_HUB_JWKS_URL must use HTTPS in production (spec §41.14)');
