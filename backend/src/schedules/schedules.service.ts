@@ -41,6 +41,19 @@ export interface RoomStatusResult {
   allSchedules: Schedule[];
 }
 
+/** เวลาท้องถิ่นของห้องแล็บ (ไม่ขึ้นกับ timezone ของเครื่อง/Docker ที่รัน backend) */
+const LAB_TIME_ZONE = 'Asia/Bangkok';
+
+const WEEKDAY_TO_ENUM: Record<string, DayOfWeek> = {
+  Sunday: DayOfWeek.SUNDAY,
+  Monday: DayOfWeek.MONDAY,
+  Tuesday: DayOfWeek.TUESDAY,
+  Wednesday: DayOfWeek.WEDNESDAY,
+  Thursday: DayOfWeek.THURSDAY,
+  Friday: DayOfWeek.FRIDAY,
+  Saturday: DayOfWeek.SATURDAY,
+};
+
 @Injectable()
 export class SchedulesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -58,18 +71,29 @@ export class SchedulesService {
     };
   }
 
-  private getCurrentDayName(date: Date): DayOfWeek {
-    const dayNames: DayOfWeek[] = [
-      DayOfWeek.SUNDAY,
-      DayOfWeek.MONDAY,
-      DayOfWeek.TUESDAY,
-      DayOfWeek.WEDNESDAY,
-      DayOfWeek.THURSDAY,
-      DayOfWeek.FRIDAY,
-      DayOfWeek.SATURDAY,
-    ];
+  /** วันและนาทีที่ผ่านไปของวัน ตามเวลา Asia/Bangkok */
+  private getBangkokNow(date: Date): { day: DayOfWeek; minutes: number } {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: LAB_TIME_ZONE,
+      weekday: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(date);
 
-    return dayNames[date.getDay()];
+    const get = (type: Intl.DateTimeFormatPartTypes): string =>
+      parts.find((p) => p.type === type)?.value ?? '';
+
+    const day = WEEKDAY_TO_ENUM[get('weekday')];
+    if (!day) {
+      throw new Error(`Unable to resolve weekday for ${date.toISOString()}`);
+    }
+
+    // บาง runtime คืน "24" ตอนเที่ยงคืน จึงใช้ % 24
+    const hour = Number(get('hour')) % 24;
+    const minute = Number(get('minute'));
+
+    return { day, minutes: hour * 60 + minute };
   }
 
   async createSchedule(dto: CreateScheduleDto): Promise<Schedule> {
@@ -132,15 +156,17 @@ export class SchedulesService {
   }
 
   async getRoomStatuses(): Promise<RoomStatusResult[]> {
-    const now = new Date();
-    const currentDay = this.getCurrentDayName(now);
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const { day: currentDay, minutes: currentMinutes } = this.getBangkokNow(
+      new Date(),
+    );
 
     const rows = await this.prisma.schedule.findMany({
       orderBy: { startTime: 'asc' },
     });
 
-    const roomNames = Array.from(new Set(rows.map((row) => row.roomName))).sort();
+    const roomNames = Array.from(
+      new Set(rows.map((row) => row.roomName)),
+    ).sort();
     const allSchedulesByRoom = new Map<string, Schedule[]>();
 
     for (const row of rows) {
@@ -157,13 +183,15 @@ export class SchedulesService {
       const todaySchedules = roomSchedules.filter(
         (schedule) => schedule.day === currentDay,
       );
+      // หน้าเว็บยังได้ตารางทั้งสัปดาห์ถ้าวันนี้ห้องว่าง (พฤติกรรมเดิม)
       const schedulesForRoom =
         todaySchedules.length > 0 ? todaySchedules : roomSchedules;
 
       let currentClass: RoomStatusResult['currentClass'] = null;
       let nextClass: RoomStatusResult['nextClass'] = null;
 
-      for (const schedule of schedulesForRoom) {
+      // คำนวณสถานะจากคาบของ "วันนี้" เท่านั้น กัน nextClass เป็นคาบของวันอื่น
+      for (const schedule of todaySchedules) {
         const [startH, startM] = schedule.startTime.split(':').map(Number);
         const [endH, endM] = schedule.endTime.split(':').map(Number);
 
@@ -173,7 +201,7 @@ export class SchedulesService {
           currentMinutes >= startTotalMinutes &&
           currentMinutes < endTotalMinutes;
 
-        if (isCurrentlyOngoing) {
+        if (isCurrentlyOngoing && !currentClass) {
           currentClass = {
             id: String(schedule.id),
             courseCode: schedule.courseCode,

@@ -37,6 +37,22 @@ function startSso(): boolean {
   return true;
 }
 
+/**
+ * Safely pull a human-readable message out of any error body: the project's
+ * envelope ({ error: { message } }), a raw NestJS error ({ message }, where
+ * message may be a string[]), or anything else (returns null).
+ */
+function extractErrorMessage(body: unknown): string | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const b = body as { error?: { message?: unknown } | null; message?: unknown };
+  const raw = b.error?.message ?? b.message;
+  if (Array.isArray(raw)) {
+    const joined = raw.filter((m): m is string => typeof m === 'string').join(', ');
+    return joined.length > 0 ? joined : null;
+  }
+  return typeof raw === 'string' && raw.length > 0 ? raw : null;
+}
+
 export async function api<T>(
   path: string,
   init: { method?: string; body?: unknown } = {},
@@ -56,7 +72,7 @@ export async function api<T>(
 
   const body = (await res.json().catch(() => null)) as Envelope<T> | null;
 
-  if (res.ok && body?.success) {
+  if (res.ok && body?.success === true) {
     return { ok: true, status: res.status, data: body.data };
   }
 
@@ -65,16 +81,18 @@ export async function api<T>(
     return { ok: false, status: 401, message: 'กำลังเข้าสู่ระบบผ่าน CSMJU Core Hub…' };
   }
 
-  return {
-    ok: false,
-    status: res.status,
-    message:
-      res.status === 401
-        ? 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง'
-        : res.status === 403
-          ? 'สิทธิ์ไม่เพียงพอ'
-          : body && !body.success
-            ? body.error.message
-            : `HTTP ${res.status}`,
-  };
+  let message: string;
+  if (res.status === 401) {
+    message = 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง';
+  } else if (res.status === 403) {
+    message = 'สิทธิ์ไม่เพียงพอ';
+  } else {
+    message =
+      extractErrorMessage(body) ??
+      (res.status >= 500
+        ? 'เซิร์ฟเวอร์ไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้ง'
+        : `เกิดข้อผิดพลาดในการเชื่อมต่อระบบ (HTTP ${res.status})`);
+  }
+
+  return { ok: false, status: res.status, message };
 }
