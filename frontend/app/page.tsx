@@ -46,7 +46,7 @@ const REFRESH_INTERVAL_MS = 60_000;
 const MAX_GROUPS = 3;
 const MAX_PEOPLE_ROOM = 45;
 const MAX_PEOPLE_BOOKING = 15;
-const LAB_OPEN = '08:00'; // สมมติ ปรับตามจริงได้
+const LAB_OPEN = '08:00';
 const LAB_CLOSE = '20:00';
 const TZ = 'Asia/Bangkok';
 const DAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
@@ -61,7 +61,7 @@ const nowMin = (): number =>
     new Date().toLocaleTimeString('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }),
   ) % 1440;
 const dayOf = (date: string): string => DAYS[new Date(`${date}T00:00:00Z`).getUTCDay()];
-// แสดงผลเป็น พ.ศ. (ข้อ 11.3) เมื่อติดตั้งแพ็กเกจแล้วให้เปลี่ยนเป็น formatDate()
+
 const fmtDate = (date: string): string =>
   new Date(`${date}T00:00:00Z`).toLocaleDateString('th-TH-u-ca-buddhist', {
     timeZone: 'UTC',
@@ -237,7 +237,6 @@ export default function Home() {
     setSelectedRoom(room);
   };
 
-  // หมายเหตุ: การจองยังเก็บฝั่ง client (backend ยังไม่มี endpoint จอง)
   const handleBooking = async (room: RoomStatus): Promise<void> => {
     const fail = (text: string): void => setMsg({ type: 'error', text });
     setMsg(null);
@@ -296,17 +295,21 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      {/* TODO: แทนด้วย <CsmjuAppShell> เมื่อติดตั้ง @csmju2030/design-system */}
       <header className="bg-primary text-on-primary">
         <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-6 md:flex-row md:items-center md:justify-between md:px-6 lg:px-8">
           <div>
             <p className="text-sm">สาขาวิชาวิทยาการคอมพิวเตอร์ คณะวิทยาศาสตร์ มหาวิทยาลัยแม่โจ้</p>
             <h1 className="text-2xl font-bold text-on-primary md:text-3xl">ระบบจองห้องปฏิบัติการ</h1>
-            <p className="text-sm">ดูสถานะห้อง (อัปเดตอัตโนมัติทุก 1 นาที) และจองห้องตามวันและเวลาที่ต้องการ</p>
+            <p className="text-sm">ดูสถานะห้อง และจองห้องตามวันและเวลาที่ต้องการ</p>
           </div>
-          <button onClick={() => setShowMine(true)} className={btnSecondary}>
-            การจองของฉัน ({myBookings.length})
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <a href="/instructor" className={btnSecondary}>
+              จัดการระบบ
+            </a>
+            <button onClick={() => setShowMine(true)} className={btnSecondary}>
+              การจองของฉัน ({myBookings.length})
+            </button>
+          </div>
         </div>
       </header>
 
@@ -504,7 +507,7 @@ export default function Home() {
       )}
 
       {confirmCancel && (
-        <Dialog title="ยืนยันการยกเลิกการจอง" onClose={closeConfirm}>
+        <Dialog title="ยืนยันการยกเลิกการจอง" onClose={confirmCancel ? () => setConfirmCancel(null) : () => {}}>
           <p className="mb-1 text-ink">
             ยกเลิกการจองห้อง &quot;{confirmCancel.roomName}&quot; วันที่ {fmtDate(confirmCancel.date)} เวลา{' '}
             {confirmCancel.start} - {confirmCancel.end} น.?

@@ -1,0 +1,456 @@
+[
+  {
+    "year": 4,
+    "plan": "แผนเอกเลือก 2",
+    "schedule": [
+      {
+        "courseCode": "10301491",
+        "courseName": "สัมมนาทางวิทยาการคอมพิวเตอร์",
+        "day": "MONDAY",
+        "time": "10:00 - 12:00",
+        "room": "บรรยายคอม 8"
+      },
+      {
+        "courseCode": "10301366",
+        "courseName": "สมองกลฝังตัว",
+        "day": "MONDAY",
+        "time": "13:00 - 15:00",
+        "room": "Labcom 5"
+      },
+      {
+        "courseCode": "10301366",
+        "courseName": "วิทยาการสมองกลฝังตัว",
+        "day": "TUESDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 5"
+      }
+    ]
+  },
+  {
+    "year": 4,
+    "plan": "แผนเอกเลือก 1",
+    "schedule": [
+      {
+        "courseCode": "10301491",
+        "courseName": "สัมมนาทางวิทยาการคอมพิวเตอร์",
+        "day": "MONDAY",
+        "time": "10:00 - 12:00",
+        "room": "บรรยายคอม 8"
+      },
+      {
+        "courseCode": "10301342",
+        "courseName": "ประมวลผลกลุ่มเมฆ",
+        "day": "MONDAY",
+        "time": "13:00 - 15:00",
+        "room": "บรรยายคอม 7"
+      },
+      {
+        "courseCode": "10301342",
+        "courseName": "การประมวลผลแบบกลุ่มเมฆ",
+        "day": "WEDNESDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 2"
+      }
+    ]
+  },
+  {
+    "year": 3,
+    "plan": "แผนเอกเลือก 2",
+    "schedule": [
+      {
+        "courseCode": "10301341",
+        "courseName": "เข้ารหัสฯ เครือข่าย",
+        "day": "MONDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 2"
+      },
+      {
+        "courseCode": "10301314",
+        "courseName": "โปรแกรมเชิงวัตถุ",
+        "day": "MONDAY",
+        "time": "13:00 - 15:00",
+        "room": "บรรยายคอม 8"
+      },
+      {
+        "courseCode": "10301385",
+        "courseName": "บริหารสารสนเทศ",
+        "day": "MONDAY",
+        "time": "15:00 - 17:00",
+        "room": "บรรยายคอม 6"
+      },
+      {
+        "courseCode": "10301341",
+        "courseName": "การเข้ารหัสฯ ในเครือข่าย",
+        "day": "TUESDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 2"
+      },
+      {
+        "courseCode": "10301391",
+        "courseName": "หัวข้อพิเศษฯคอม 1",
+        "day": "TUESDAY",
+        "time": "13:00 - 15:00",
+        "room": "บรรยายคอม 6"
+      },
+      {
+        "courseCode": "10301391",
+        "courseName": "หัวข้อพิเศษทางวิทยาการคอมพิวเตอร์ 1",
+        "day": "THURSDAY",
+        "time": "10:00 - 12:00",
+        "room": "บรรยายคอม 6"
+      },
+      {
+        "courseCode": "10301385",
+        "courseName": "บริหารสารสนเทศฯการจัดการ",
+        "day": "THURSDAY",
+        "time": "14:00 - 17:00",
+        "room": "บรรยายคอม 6"
+      },
+      {
+        "courseCode": "10301314",
+        "courseName": "หลักการเขียนโปรแกรมเชิงวัตถุ",
+        "day": "FRIDAY",
+        "time": "10:00 - 12:00",
+        "room": "บรรยายคอม 6"
+      }
+    ]
+  },
+  {
+    "year": 3,
+    "plan": "แผนเอกเลือก 1",
+    "schedule": [
+      {
+        "courseCode": "10301351",
+        "courseName": "วิทยาการข้อมูล",
+        "day": "MONDAY",
+        "time": "10:00 - 12:00",
+        "room": "บรรยายคอม 6"
+      },
+      {
+        "courseCode": "10301364",
+        "courseName": "ตรรกศาสตร์ดิจิทัล",
+        "day": "MONDAY",
+        "time": "13:00 - 15:00",
+        "room": "Labcom 2"
+      },
+      {
+        "courseCode": "10301371",
+        "courseName": "ปัญญาประดิษฐ์",
+        "day": "TUESDAY",
+        "time": "10:00 - 12:00",
+        "room": "จุฬา 3203"
+      },
+      {
+        "courseCode": "10301351",
+        "courseName": "วิทยาการข้อมูล",
+        "day": "TUESDAY",
+        "time": "13:00 - 15:00",
+        "room": "Labcom 2"
+      },
+      {
+        "courseCode": "10301364",
+        "courseName": "ตรรกศาสตร์เชิงดิจิทัลฯ",
+        "day": "THURSDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 2"
+      },
+      {
+        "courseCode": "10301374",
+        "courseName": "ภาษาธรรมชาติ",
+        "day": "THURSDAY",
+        "time": "13:00 - 15:00",
+        "room": "บรรยายคอม 8"
+      },
+      {
+        "courseCode": "10301374",
+        "courseName": "การประมวลผลภาษาธรรมชาติ",
+        "day": "FRIDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 2"
+      },
+      {
+        "courseCode": "10301371",
+        "courseName": "ปัญญาประดิษฐ์",
+        "day": "FRIDAY",
+        "time": "13:00 - 15:00",
+        "room": "Labcom 2"
+      }
+    ]
+  },
+  {
+    "year": 2,
+    "plan": "แผนการเรียน 2",
+    "schedule": [
+      {
+        "courseCode": "10301231",
+        "courseName": "เว็บเทคโนโลยี",
+        "day": "MONDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10301225",
+        "courseName": "วิศวกรรมซอฟต์แวร์",
+        "day": "MONDAY",
+        "time": "13:00 - 15:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10301211",
+        "courseName": "คณิตคอมฯ",
+        "day": "TUESDAY",
+        "time": "09:00 - 10:00",
+        "room": "จุฬา 3203"
+      },
+      {
+        "courseCode": "10700313",
+        "courseName": "Eng เชิงวิทย์ฯ",
+        "day": "TUESDAY",
+        "time": "10:00 - 12:00",
+        "room": "80-501"
+      },
+      {
+        "courseCode": "10301223",
+        "courseName": "ฐานข้อมูลฯ",
+        "day": "TUESDAY",
+        "time": "13:00 - 15:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10301222",
+        "courseName": "โครงสร้างข้อมูลฯ",
+        "day": "TUESDAY",
+        "time": "15:00 - 17:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10301222",
+        "courseName": "โครงสร้างข้อมูลและอัลกอริทึม",
+        "day": "WEDNESDAY",
+        "time": "10:00 - 12:00",
+        "room": "จุฬา 3203"
+      },
+      {
+        "courseCode": "10301223",
+        "courseName": "ฐานข้อมูลโครงสร้างเชิงสัมพันธ์",
+        "day": "THURSDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10301231",
+        "courseName": "เว็บเทคโนโลยี",
+        "day": "THURSDAY",
+        "time": "13:00 - 15:00",
+        "room": "จุฬา 3203"
+      },
+      {
+        "courseCode": "10301211",
+        "courseName": "คณิตคอมฯ",
+        "day": "FRIDAY",
+        "time": "09:00 - 10:00",
+        "room": "จุฬา 3203"
+      },
+      {
+        "courseCode": "10700313",
+        "courseName": "Eng เชิงวิทย์ฯ",
+        "day": "FRIDAY",
+        "time": "10:00 - 12:00",
+        "room": "80-501"
+      },
+      {
+        "courseCode": "10301225",
+        "courseName": "วิศวกรรมซอฟต์แวร์",
+        "day": "FRIDAY",
+        "time": "13:00 - 15:00",
+        "room": "Labcom 3-4"
+      }
+    ]
+  },
+  {
+    "year": 2,
+    "plan": "แผนการเรียน 1",
+    "schedule": [
+      {
+        "courseCode": "10301231",
+        "courseName": "เว็บเทคโนโลยี",
+        "day": "MONDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10301225",
+        "courseName": "วิศวกรรมซอฟต์แวร์",
+        "day": "MONDAY",
+        "time": "13:00 - 15:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10700313",
+        "courseName": "Eng เชิงวิทย์ฯ",
+        "day": "MONDAY",
+        "time": "15:00 - 17:00",
+        "room": "80-401"
+      },
+      {
+        "courseCode": "10301211",
+        "courseName": "คณิตคอมฯ",
+        "day": "TUESDAY",
+        "time": "09:00 - 10:00",
+        "room": "จุฬา 3203"
+      },
+      {
+        "courseCode": "10301223",
+        "courseName": "ฐานข้อมูลฯ",
+        "day": "TUESDAY",
+        "time": "13:00 - 15:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10301222",
+        "courseName": "โครงสร้างข้อมูลฯ",
+        "day": "TUESDAY",
+        "time": "15:00 - 17:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10301222",
+        "courseName": "โครงสร้างข้อมูลและอัลกอริทึม",
+        "day": "WEDNESDAY",
+        "time": "10:00 - 12:00",
+        "room": "จุฬา 3203"
+      },
+      {
+        "courseCode": "10301223",
+        "courseName": "ฐานข้อมูลโครงสร้างเชิงสัมพันธ์",
+        "day": "THURSDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10700313",
+        "courseName": "Eng เชิงวิทย์ฯ",
+        "day": "THURSDAY",
+        "time": "15:00 - 17:00",
+        "room": "80-401"
+      },
+      {
+        "courseCode": "10301211",
+        "courseName": "คณิตคอมฯ",
+        "day": "FRIDAY",
+        "time": "09:00 - 10:00",
+        "room": "จุฬา 3203"
+      },
+      {
+        "courseCode": "10301231",
+        "courseName": "เว็บเทคโนโลยี",
+        "day": "FRIDAY",
+        "time": "13:00 - 15:00",
+        "room": "จุฬา 3203"
+      },
+      {
+        "courseCode": "10301225",
+        "courseName": "วิศวกรรมซอฟต์แวร์",
+        "day": "FRIDAY",
+        "time": "13:00 - 15:00",
+        "room": "Labcom 3-4"
+      }
+    ]
+  },
+  {
+    "year": 1,
+    "plan": "แผน 2",
+    "schedule": [
+      {
+        "courseCode": "10305108",
+        "courseName": "แคลสำหรับวิทย์",
+        "day": "TUESDAY",
+        "time": "08:00 - 10:00",
+        "room": "วิทย์ 2105"
+      },
+      {
+        "courseCode": "10301111",
+        "courseName": "โปรแกรมเบื้องต้น",
+        "day": "TUESDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10301112",
+        "courseName": "เทคโนโลยีสารสนเทศ",
+        "day": "TUESDAY",
+        "time": "13:00 - 15:00",
+        "room": "จุฬา 3203"
+      },
+      {
+        "courseCode": "10301111",
+        "courseName": "ปฏิบัติการเขียนโปรแกรมเบื้องต้น",
+        "day": "WEDNESDAY",
+        "time": "09:00 - 12:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10305108",
+        "courseName": "แคลสำหรับวิทย์",
+        "day": "FRIDAY",
+        "time": "08:00 - 10:00",
+        "room": "วิทย์ 2105"
+      },
+      {
+        "courseCode": "10301112",
+        "courseName": "ปฏิบัติการเทคโนโลยีสารสนเทศและการสื่อสาร",
+        "day": "FRIDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 3-4"
+      }
+    ]
+  },
+  {
+    "year": 1,
+    "plan": "แผน 1",
+    "schedule": [
+      {
+        "courseCode": "10301111",
+        "courseName": "โปรแกรมเบื้องต้น",
+        "day": "TUESDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10301112",
+        "courseName": "เทคโนโลยีสารสนเทศ",
+        "day": "TUESDAY",
+        "time": "13:00 - 15:00",
+        "room": "จุฬา 3203"
+      },
+      {
+        "courseCode": "10305108",
+        "courseName": "แคลสำหรับวิทย์",
+        "day": "TUESDAY",
+        "time": "15:00 - 17:00",
+        "room": "Lab คณิต 4"
+      },
+      {
+        "courseCode": "10301111",
+        "courseName": "ปฏิบัติการเขียนโปรแกรมเบื้องต้น",
+        "day": "WEDNESDAY",
+        "time": "09:00 - 12:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10301112",
+        "courseName": "ปฏิบัติการเทคโนโลยีสารสนเทศและการสื่อสาร",
+        "day": "FRIDAY",
+        "time": "10:00 - 12:00",
+        "room": "Labcom 3-4"
+      },
+      {
+        "courseCode": "10305108",
+        "courseName": "แคลสำหรับวิทย์",
+        "day": "FRIDAY",
+        "time": "15:00 - 17:00",
+        "room": "Lab คณิต 4"
+      }
+    ]
+  }
+]
