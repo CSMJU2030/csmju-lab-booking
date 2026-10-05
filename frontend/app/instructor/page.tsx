@@ -29,7 +29,7 @@ export default function InstructorDashboard() {
     instructorName: '',
     courseCode: '',
     courseName: '',
-    roomName: 'lab1',
+    roomName: 'Lab คอม 3',
     day: 'MONDAY',
     startTime: '09:00',
     endTime: '12:00',
@@ -100,7 +100,7 @@ export default function InstructorDashboard() {
           instructorName: '',
           courseCode: '',
           courseName: '',
-          roomName: 'lab1',
+          roomName: 'Lab คอม 3',
           day: 'MONDAY',
           startTime: '09:00',
           endTime: '12:00',
@@ -192,7 +192,7 @@ export default function InstructorDashboard() {
                   <input
                     type="text"
                     required
-                    placeholder="เช่น lab1"
+                    placeholder="เช่น Lab คอม 3"
                     value={formData.roomName}
                     onChange={(e) => setFormData({ ...formData, roomName: e.target.value })}
                     className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
