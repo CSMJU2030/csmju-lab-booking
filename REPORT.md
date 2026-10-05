@@ -1,5 +1,30 @@
 # REPORT — csmju-lab-booking
 
+## ตารางเรียนจริง ภาค 1/2569 (2026-10-06)
+
+ผลรันจริง (Linux, Node 22, pnpm 9.15.9, PostgreSQL 16) กับ standards v1.7.0
+
+```
+./standards/scripts/run-all-checks.sh .     → All 19 checks passed
+pnpm --filter backend test                  → 145 passed (11 suites)
+pnpm --filter backend test:e2e              → 73 passed (3 suites)
+rm -rf frontend/.next && pnpm -r lint/typecheck/build → ผ่าน
+prisma migrate deploy → seed → seed ซ้ำ → seed --reset → migrate diff → "No difference detected."
+```
+
+seed ได้ห้อง 11 ห้อง, `schedules` 48 แถว, `room_schedules` 48 แถว · รันซ้ำได้ `Created 0`
+บูต `dist/src/main.js` (`LOCAL_TEST_ROLE=staff`) แล้ว `GET /api/v1/schedules/status` ได้ 10 ห้องที่มีคาบ
+และคาบถัดไปตรงกับตารางของวันอังคาร (เวลาไทย) ทุกห้อง
+
+ไฟล์ที่แก้:
+- `backend/prisma/seed.ts` — ตารางเรียนจริงทุกชั้นปี (ยกเว้นวิชาศึกษาทั่วไป: ภาษาไทย ภาษาอังกฤษ เกษตรเพื่อชีวิต) ลงทั้ง `schedules` (หน้าแสดงผล) และ `room_schedules` (ตรวจการจองชนคาบเรียน), `--reset` ลบเฉพาะตารางเรียน
+- `backend/src/schedules/schedules.service.ts` — สถานะห้องเลิกใช้รายชื่อ `lab1–lab3` ที่เขียนตายตัว ใช้ทุกห้องที่มีคาบ และคิดเฉพาะคาบของ "วันนี้" ตามเวลาไทย (เดิมไม่กรองวัน ห้องจึงขึ้นว่ามีเรียนแม้เป็นคาบของวันอื่น)
+- `backend/src/schedules/bangkok-clock.ts` (+ spec) — วันและเวลาปัจจุบันตาม `Asia/Bangkok` ไม่ขึ้นกับ timezone ของ server
+- `backend/test/schedules.e2e-spec.ts` — ปรับเทสต์ตามพฤติกรรมใหม่ เพิ่มเคสตารางว่างและคาบของวันอื่น
+- `frontend/app/instructor/page.tsx` — ค่าเริ่มต้นห้องในฟอร์มเป็น `Lab คอม 3` แทน `lab1`
+
+ข้อสมมติ: "Labcom 3-4" = ใช้ Lab คอม 3 และ 4 พร้อมกัน (บันทึกห้องละแถว) · `instructor_name` ใส่ `ยังไม่ระบุ` เพราะตารางไม่มีชื่ออาจารย์ · เวลาคาบปี 1 อ่านจากภาพตาราง (มีเศษครึ่งชั่วโมง) · ชื่ออาคารของห้องบรรยาย/วิทย์/คณิตยังเป็นค่าเดา (มี TODO ใน seed)
+
 ## ผลรัน
 
 รันในเครื่อง (Windows, Git Bash) เมื่อ 2026-09-30 กับ standards v1.5.2
