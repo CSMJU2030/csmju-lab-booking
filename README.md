@@ -40,7 +40,9 @@ cp frontend/.env.example frontend/.env.local
 ```bash
 docker compose up -d lab-booking-db           # PostgreSQL 16 ที่พอร์ต 5434
 pnpm --filter backend exec prisma migrate deploy
-pnpm --filter backend prisma:seed             # ข้อมูลตัวอย่าง (ห้อง)
+pnpm --filter backend prisma:seed             # ห้อง + ตารางเรียนจริง ภาค 1/2569 (รันซ้ำได้ ไม่สร้างซ้ำ)
+# ตารางเรียนเปลี่ยน: แก้ backend/prisma/seed.ts แล้วล้างของเดิมก่อน seed (ไม่แตะห้องและการจอง)
+pnpm --filter backend exec ts-node prisma/seed.ts --reset
 ```
 
 ### รันโดยยังไม่มี Core Hub (โหมดทดสอบชั่วคราว)
