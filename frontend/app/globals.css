@@ -1,26 +1,92 @@
 @import "tailwindcss";
 
+/* Design tokens ตาม ui-design-system.md ข้อ 3 (hex อยู่ที่นี่ที่เดียว)
+   เมื่อติดตั้ง @csmju2030/design-system แล้ว ให้ลบบล็อก :root นี้และ import styles.css ของแพ็กเกจแทน */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --csmju-color-primary: #004c99;
+  --csmju-color-primary-hover: #003d7a;
+  --csmju-color-primary-soft: #e6f2ff;
+  --csmju-color-focus-ring: #93c5fd;
+  --csmju-color-canvas: #f1f5fb;
+  --csmju-color-surface: #ffffff;
+  --csmju-color-surface-muted: #f8fafc;
+  --csmju-color-text: #0f172a;
+  --csmju-color-text-body: #334155;
+  --csmju-color-text-muted: #64748b;
+  --csmju-color-text-inverse: #f8fafc;
+  --csmju-color-border: #e2e8f0;
+  --csmju-color-border-strong: #cbd5e1;
+  --csmju-color-success-text: #15803d;
+  --csmju-color-success-bg: #dcfce7;
+  --csmju-color-success-border: #86efac;
+  --csmju-color-danger-text: #b91c1c;
+  --csmju-color-danger-bg: #fee2e2;
+  --csmju-color-danger-border: #fca5a5;
+  --csmju-radius-sm: 8px;
+  --csmju-radius-lg: 16px;
+  --csmju-font-body: "Inter", "IBM Plex Sans Thai", system-ui, sans-serif;
+  --csmju-font-heading: "Plus Jakarta Sans", "IBM Plex Sans Thai", system-ui, sans-serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--csmju-color-primary);
+  --color-primary-hover: var(--csmju-color-primary-hover);
+  --color-primary-soft: var(--csmju-color-primary-soft);
+  --color-canvas: var(--csmju-color-canvas);
+  --color-surface: var(--csmju-color-surface);
+  --color-surface-muted: var(--csmju-color-surface-muted);
+  --color-ink: var(--csmju-color-text);
+  --color-body: var(--csmju-color-text-body);
+  --color-muted: var(--csmju-color-text-muted);
+  --color-on-primary: var(--csmju-color-text-inverse);
+  --color-line: var(--csmju-color-border);
+  --color-line-strong: var(--csmju-color-border-strong);
+  --color-success: var(--csmju-color-success-text);
+  --color-success-soft: var(--csmju-color-success-bg);
+  --color-success-line: var(--csmju-color-success-border);
+  --color-danger: var(--csmju-color-danger-text);
+  --color-danger-soft: var(--csmju-color-danger-bg);
+  --color-danger-line: var(--csmju-color-danger-border);
+  --color-focus: var(--csmju-color-focus-ring);
+  --radius-ctl: var(--csmju-radius-sm);
+  --radius-card: var(--csmju-radius-lg);
+  --font-sans: var(--csmju-font-body);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ต้องอยู่ใน @layer base ไม่งั้นจะทับ utility class ของ Tailwind */
+@layer base {
+  body {
+    background: var(--csmju-color-canvas);
+    color: var(--csmju-color-text-body);
+    font-family: var(--csmju-font-body);
+    font-size: 16px;
+    line-height: 1.65;
+    letter-spacing: 0;
+    word-break: normal;
+    overflow-wrap: break-word;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--csmju-font-heading);
+    color: var(--csmju-color-text);
+    line-height: 1.4;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--csmju-color-focus-ring);
+    outline-offset: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
