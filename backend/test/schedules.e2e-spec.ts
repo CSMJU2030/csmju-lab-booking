@@ -9,6 +9,7 @@ import request from 'supertest';
 import { bootApp } from './helpers/boot-app';
 import { FakeCoreHub } from './helpers/fake-core-hub';
 import { InMemoryPrisma } from './helpers/in-memory-prisma';
+import { bangkokClock } from '../src/common/bangkok-clock';
 import { TestSigningKey, createSigningKey, signCoreHubToken } from './helpers/token-factory';
 
 const NOT_FOUND_ID = '99999999-9999-4999-8999-999999999999';
@@ -136,20 +137,65 @@ describe('Lab booking API (e2e)', () => {
   });
 
   describe('GET /api/v1/schedules/status', () => {
-    it('reports the three labs', async () => {
+    it('lists every room that has a class, in name order', async () => {
+      await http().post('/api/v1/schedules').set(as(staffToken)).send({ ...validBody, roomName: 'Lab คอม 4' });
+      await http().post('/api/v1/schedules').set(as(staffToken)).send({ ...validBody, roomName: 'Lab คอม 3' });
+
       const res = await http().get('/api/v1/schedules/status').set(as(staffToken)).expect(200);
-      expect(res.body.data.map((r: { roomName: string }) => r.roomName)).toEqual(['lab1', 'lab2', 'lab3']);
+      expect(res.body.data.map((r: { roomName: string }) => r.roomName)).toEqual(['Lab คอม 3', 'Lab คอม 4']);
     });
 
-    it('marks a lab occupied while a class is running', async () => {
+    it('answers an empty list when there is no timetable', async () => {
+      const res = await http().get('/api/v1/schedules/status').set(as(staffToken)).expect(200);
+      expect(res.body.data).toEqual([]);
+    });
+
+    it('marks a room occupied while a class is running today (Thai time)', async () => {
       await http()
         .post('/api/v1/schedules')
         .set(as(staffToken))
-        .send({ ...validBody, startTime: '00:00', endTime: '23:59' });
+        .send({ ...validBody, day: bangkokClock().day, startTime: '00:00', endTime: '23:59' });
 
       const res = await http().get('/api/v1/schedules/status').set(as(staffToken)).expect(200);
       const lab1 = res.body.data.find((r: { roomName: string }) => r.roomName === 'lab1');
       expect(lab1).toMatchObject({ isOccupied: true, statusColor: 'red' });
+    });
+
+    it('ignores classes on other days when deciding occupancy', async () => {
+      const today = bangkokClock().day;
+      const otherDay = today === 'MONDAY' ? 'TUESDAY' : 'MONDAY';
+      await http()
+        .post('/api/v1/schedules')
+        .set(as(staffToken))
+        .send({ ...validBody, day: otherDay, startTime: '00:00', endTime: '23:59' });
+
+      const res = await http().get('/api/v1/schedules/status').set(as(staffToken)).expect(200);
+      const lab1 = res.body.data.find((r: { roomName: string }) => r.roomName === 'lab1');
+      expect(lab1).toMatchObject({ isOccupied: false, statusColor: 'green', currentClass: null });
+      expect(lab1.allSchedules).toHaveLength(1);
+    });
+  });
+
+  describe('GET /api/v1/schedules/:id', () => {
+    it('returns one class', async () => {
+      const created = await http().post('/api/v1/schedules').set(as(staffToken)).send(validBody);
+      const id = created.body.data.id as string;
+
+      const res = await http().get(`/api/v1/schedules/${id}`).set(as(studentToken)).expect(200);
+      expect(res.body.data).toMatchObject({ id, courseCode: validBody.courseCode });
+    });
+
+    it('answers 404 NOT_FOUND for an unknown id', async () => {
+      const res = await http().get(`/api/v1/schedules/${NOT_FOUND_ID}`).set(as(staffToken)).expect(404);
+      expect(res.body).toMatchObject({ success: false, error: { code: 'NOT_FOUND' } });
+    });
+
+    it('answers 400 for an id that is not a uuid', async () => {
+      await http().get('/api/v1/schedules/not-a-uuid').set(as(staffToken)).expect(400);
+    });
+
+    it('still serves /status rather than treating it as an id', async () => {
+      await http().get('/api/v1/schedules/status').set(as(staffToken)).expect(200);
     });
   });
 

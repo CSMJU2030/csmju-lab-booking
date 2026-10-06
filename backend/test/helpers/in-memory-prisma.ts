@@ -38,8 +38,16 @@ function matches(row: Row, where: Row | undefined): boolean {
         ? haystack.toLowerCase().includes(needle.toLowerCase())
         : haystack.includes(needle);
     }
-    return row[field] === condition;
+    return same(row[field], condition);
   });
+}
+
+/** Equality that also treats two Date objects with the same instant as equal. */
+function same(left: unknown, right: unknown): boolean {
+  if (left instanceof Date && right instanceof Date) {
+    return left.getTime() === right.getTime();
+  }
+  return left === right;
 }
 
 function sortRows(rows: Row[], orderBy?: Row): Row[] {
@@ -74,7 +82,7 @@ class Table {
       }
     }
     return this.rows.find((row) =>
-      Object.entries(where).every(([field, value]) => row[field] === value),
+      Object.entries(where).every(([field, value]) => same(row[field], value)),
     );
   }
 
@@ -151,6 +159,19 @@ class Table {
 
 export class InMemoryPrisma {
   schedule = new Table([], [], () => ({ day: 'MONDAY' }));
+  room = new Table(['name'], [], () => ({ building: null }));
+  roomSchedule = new Table([], [], () => ({ subjectName: null, academicYear: null }));
+  reservation = new Table([], [], () => ({ status: 'PENDING', peopleCount: 1 }));
+
+  /** Runs the callback against this same store (no isolation is needed in tests). */
+  async $transaction<T>(fn: (tx: this) => Promise<T>): Promise<T> {
+    return fn(this);
+  }
+
+  /** Raw SQL (advisory locks) is a no-op in memory. */
+  async $executeRaw(): Promise<number> {
+    return 0;
+  }
 
   async $connect(): Promise<void> {}
   async $disconnect(): Promise<void> {}
@@ -159,5 +180,8 @@ export class InMemoryPrisma {
 
   reset(): void {
     this.schedule.rows = [];
+    this.room.rows = [];
+    this.roomSchedule.rows = [];
+    this.reservation.rows = [];
   }
 }

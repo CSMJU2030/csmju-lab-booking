@@ -3,6 +3,7 @@ import { DayOfWeek, Prisma } from '../../generated/prisma/client';
 import { AppException } from '../common/errors';
 import { PrismaService } from '../prisma/prisma.service';
 import { fromTimeDate, toTimeDate } from '../prisma/time.util';
+import { bangkokClock } from '../common/bangkok-clock';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { QuerySchedulesDto } from './dto/query-schedules.dto';
 
@@ -99,6 +100,14 @@ export class SchedulesService {
     return { items: rows.map((r) => this.toSchedule(r)), total };
   }
 
+  async getSchedule(id: string): Promise<Schedule> {
+    const row = await this.prisma.schedule.findUnique({ where: { id } });
+    if (!row) {
+      throw AppException.notFound('Schedule not found');
+    }
+    return this.toSchedule(row);
+  }
+
   async deleteSchedule(id: string): Promise<{ id: string; deleted: true }> {
     const existing = await this.prisma.schedule.findUnique({ where: { id } });
     if (!existing) {
@@ -108,25 +117,31 @@ export class SchedulesService {
     return { id, deleted: true };
   }
 
-  async getRoomStatuses(): Promise<RoomStatusResult[]> {
-    const roomNames = ['lab1', 'lab2', 'lab3'];
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  /**
+   * สถานะทุกห้องที่มีตารางเรียน: ห้องไหนมีคาบอยู่ตอนนี้ และคาบถัดไปของวันนี้
+   * "ตอนนี้" และ "วันนี้" คิดตามเวลาไทย ส่วน allSchedules คืนคาบของห้องนั้นครบทุกวัน
+   */
+  async getRoomStatuses(now: Date = new Date()): Promise<RoomStatusResult[]> {
+    const { day: today, minutes: currentMinutes } = bangkokClock(now);
+
+    const allSchedules = (
+      await this.prisma.schedule.findMany({ orderBy: { startTime: 'asc' } })
+    ).map((r) => this.toSchedule(r));
+
+    const roomNames = [...new Set(allSchedules.map((s) => s.roomName))].sort(
+      (a, b) => a.localeCompare(b, 'th'),
+    );
 
     const result: RoomStatusResult[] = [];
 
     for (const roomName of roomNames) {
-      const schedules = (
-        await this.prisma.schedule.findMany({
-          where: { roomName },
-          orderBy: { startTime: 'asc' },
-        })
-      ).map((r) => this.toSchedule(r));
+      const schedules = allSchedules.filter((s) => s.roomName === roomName);
+      const todaySchedules = schedules.filter((s) => s.day === today);
 
       let currentClass: RoomStatusResult['currentClass'] = null;
       let nextClass: RoomStatusResult['nextClass'] = null;
 
-      for (const s of schedules) {
+      for (const s of todaySchedules) {
         const [startH, startM] = s.startTime.split(':').map(Number);
         const [endH, endM] = s.endTime.split(':').map(Number);
 

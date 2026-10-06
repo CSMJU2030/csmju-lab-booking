@@ -122,6 +122,27 @@
       }
     },
     "/api/v1/schedules/{id}": {
+      "get": {
+        "operationId": "SchedulesController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Schedules"
+        ]
+      },
       "delete": {
         "operationId": "SchedulesController_remove",
         "parameters": [
@@ -144,6 +165,43 @@
         ]
       }
     },
+    "/api/v1/rooms": {
+      "get": {
+        "operationId": "RoomsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Rooms"
+        ]
+      }
+    },
+    "/api/v1/rooms/{id}/availability": {
+      "get": {
+        "operationId": "RoomsController_availability",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Rooms"
+        ]
+      }
+    },
     "/api/v1/rooms/check": {
       "get": {
         "operationId": "RoomsController_checkConflict",
@@ -155,6 +213,65 @@
         },
         "tags": [
           "Rooms"
+        ]
+      }
+    },
+    "/api/v1/reservations": {
+      "post": {
+        "operationId": "ReservationsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReservationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reservations"
+        ]
+      },
+      "get": {
+        "operationId": "ReservationsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reservations"
+        ]
+      }
+    },
+    "/api/v1/reservations/{id}": {
+      "delete": {
+        "operationId": "ReservationsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reservations"
         ]
       }
     }
@@ -177,6 +294,10 @@
     },
     "schemas": {
       "CreateScheduleDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateReservationDto": {
         "type": "object",
         "properties": {}
       }

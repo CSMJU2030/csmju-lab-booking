@@ -40,7 +40,9 @@ cp frontend/.env.example frontend/.env.local
 ```bash
 docker compose up -d lab-booking-db           # PostgreSQL 16 ที่พอร์ต 5434
 pnpm --filter backend exec prisma migrate deploy
-pnpm --filter backend prisma:seed             # ข้อมูลตัวอย่าง (ห้อง)
+pnpm --filter backend prisma:seed             # ห้อง + ตารางเรียนจริง ภาค 1/2569 (รันซ้ำได้ ไม่สร้างซ้ำ)
+# ตารางเรียนเปลี่ยน: แก้ backend/prisma/seed.ts แล้วล้างของเดิมก่อน seed (ไม่แตะห้องและการจอง)
+pnpm --filter backend exec ts-node prisma/seed.ts --reset
 ```
 
 ### รันโดยยังไม่มี Core Hub (โหมดทดสอบชั่วคราว)
@@ -95,12 +97,34 @@ pnpm --filter backend generate:openapi
 
 | core role | subsystem role | ทำได้ |
 |---|---|---|
-| student | STUDENT | ดูตารางและสถานะห้อง |
+| student | STUDENT | ดูตารางและสถานะห้อง + จองห้อง / ดู / ยกเลิกการจองของตัวเอง |
 | alumni | ALUMNI | ดูตารางและสถานะห้อง |
-| staff | STAFF | ดู + เพิ่ม/ลบตารางเรียน |
+| staff | STAFF | ทุกอย่างของ student + เพิ่ม/ลบตารางเรียน + ดู/ยกเลิกการจองของทุกคน |
+| lecturer | STAFF | เหมือน staff (อาจารย์) |
 | admin | ADMIN | ทุกอย่าง |
+| guest | — | เข้าไม่ได้ (403) |
 
-อาจารย์ใช้ core role `staff` (ยังไม่มี role `lecturer` ในมาตรฐานเวอร์ชันนี้)
+อาจารย์ใช้ core role `lecturer` ซึ่ง map เป็น `STAFF` ตาม authorization.md ข้อ 2 · ทะเบียนใน Core Hub ต้องใช้ mapping เดียวกับ `backend/src/auth/role-mapping.ts` เป๊ะ: `student→STUDENT · alumni→ALUMNI · staff→STAFF · lecturer→STAFF · admin→ADMIN` · เมนู "จัดการตารางเรียน" และปุ่ม "เพิ่มคาบเรียน" แสดงเฉพาะ staff/admin
+permission ทั้งหมดอยู่ที่ `backend/src/auth/permissions.ts` ที่เดียว
+
+## การจองห้อง
+
+- เลือกห้อง → วัน (วันนี้ถึงอีก 30 วัน) → เวลา 08:00–20:00 (ทีละ 30 นาที) → จำนวนคน (1–15) → วัตถุประสงค์
+- ห้ามชนคาบเรียน (`schedules` + `room_schedules`) · ช่วงเวลาเดียวกันรับได้ไม่เกิน 3 กลุ่ม / 45 คน · จองซ้อนตัวเองไม่ได้
+- ผ่านกติกาครบ = ยืนยันทันที (`APPROVED`) — ยังไม่มีขั้นอนุมัติ
+- กติกาอยู่ที่ `backend/src/reservations/booking-rules.ts` ที่เดียว หน้าเว็บอ่านค่าจาก `GET /api/v1/rooms/:id/availability`
+
+| method | path | permission |
+|---|---|---|
+| GET | `/api/v1/rooms` | `room:read` |
+| GET | `/api/v1/rooms/:id/availability?date=YYYY-MM-DD` | `room:read` |
+| POST | `/api/v1/reservations` | `reservation:create:own` |
+| GET | `/api/v1/reservations?scope=mine\|all` | `reservation:read:own` (`all` ต้องมี `reservation:read:any`) |
+| DELETE | `/api/v1/reservations/:id` | `reservation:delete:own` / `reservation:delete:any` |
+
+## หน้าเว็บ
+
+ใช้ของกลางจาก template มาตรฐาน `csmju-subsystem-web` (`frontend/csmju/` · `frontend/app/globals.css` · `public/csmju-logo.png`) ตาม ui-design-system ข้อ 17.0 — **ห้ามแก้ไฟล์ใน `frontend/csmju/`**
 
 ## ตรวจตามมาตรฐาน
 

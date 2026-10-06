@@ -1,5 +1,79 @@
 # REPORT — csmju-lab-booking
 
+## ทดสอบกับ Core Hub จริงในเครื่อง + conformance (2026-10-06)
+
+ตาม `standards/docs/LOCAL_INTEGRATION_GUIDE.md` — Core Hub (3000/3100) + ระบบนี้ (3003/3002) บนเครื่อง AIE
+ลงทะเบียน `csmju-lab-booking` ใน BackOffice: callback `http://localhost:3002/auth/callback` ·
+mapping `student→STUDENT · alumni→ALUMNI · staff→STAFF · lecturer→STAFF · admin→ADMIN` (ไม่รับ guest) → approve → activate
+
+```
+node standards/conformance/run.js
+RESULT: 69 passed · 0 failed · 0 skipped · 0 warnings · retries: 0
+✅ CONFORMANT — csmju-lab-booking meets standard v1.2 L3
+```
+
+ทดสอบด้วยมือผ่าน SSO จริง (ไม่มี LOCAL_TEST_ROLE):
+- เปิดระบบโดยไม่ login → ไปหน้า login ของ Core Hub · หลัง login กลับมาหน้าแรก (`SSO_POST_LOGIN_REDIRECT=/`)
+- เข้าจากเมนู "ระบบย่อย" ใน Portal ได้โดยไม่ต้องใส่รหัสซ้ำ
+- staff: `/api/v1/me` → `user-003 · staff → STAFF` · มีเมนูจัดการตารางเรียน
+- student: ไม่มีเมนูอาจารย์ · เปิด `/instructor` เองได้หน้า "ไม่มีสิทธิ์" · จองได้
+- alumni: ไม่มีปุ่มจองและเมนูการจอง
+- ไม่มี token → `GET /api/v1/me` 401 · ออกจากระบบ → หน้ายืนยันของ Core Hub
+
+แก้ระหว่างทดสอบ: map `lecturer → STAFF` (authorization.md ข้อ 2) · หน้าหลัง login เป็น `/` แทน `/api/v1/me` ·
+ซ่อนเมนูการจองจากผู้ที่จองไม่ได้ · ประกาศ `probes` และ `core_hub_web_url` ใน `subsystem.yaml` ·
+เพิ่ม `GET /api/v1/schedules/:id` ให้ probe 404/400 ทดสอบได้
+
+## จองห้องแบบเลือกวัน-เวลา + หน้าเว็บตามมาตรฐาน (2026-10-06)
+
+ผลรันจริง (Linux, Node 22, pnpm 9.15.9, PostgreSQL 16) กับ standards v1.7.0
+
+```
+./standards/scripts/run-all-checks.sh .     → All 19 checks passed
+pnpm --filter backend test                  → 150 passed
+pnpm --filter backend test:e2e              → 96 passed
+rm -rf frontend/.next && pnpm -r lint/typecheck/build → ผ่าน
+prisma migrate deploy (3 migrations) → migrate diff → "No difference detected."
+```
+
+ทดสอบกับ backend + frontend จริง (`LOCAL_TEST_ROLE`):
+- จองผ่านหน้าเว็บ → `POST /api/v1/reservations` 201 → หน้า "การจองของฉัน" แสดงรายการ · ยกเลิก 200 `{id, deleted:true}`
+- จองซ้อนตัวเอง 409 · ชนคาบเรียน 409 (บอกชื่อวิชาและเวลา) · วันย้อนหลัง 400 · body ผิด 400 `VALIDATION_ERROR`
+- STUDENT: จองได้ 201 · เพิ่มคาบ 403 · `scope=all` 403 — ALUMNI: จอง 403 — STAFF: ทำได้ทุกข้อ
+- มือถือ 360px อ่านได้ครบ
+
+สิ่งที่เปลี่ยน:
+- backend: `POST/GET/DELETE /api/v1/reservations`, `GET /api/v1/rooms`, `GET /api/v1/rooms/:id/availability` · permission `reservation:*` · migration `20261006000001_add_reservation_people_count` (เพิ่มคอลัมน์ ไม่แก้ของเดิม) · ล็อก `pg_advisory_xact_lock` ต่อห้อง+วันกันจองพร้อมกันจนเกินโควตา · `bangkok-clock` ย้ายไป `src/common/`
+- frontend: ใช้ template `csmju-subsystem-web` ของมาตรฐาน (AppShell, token, ฟอนต์ Noto Sans Thai / Plus Jakarta Sans ผ่าน `next/font`) · หน้า ห้องปฏิบัติการ / จองห้อง / การจองของฉัน / จัดการตารางเรียน · มี loading / empty / error ครบ · เมนูอาจารย์แสดงเฉพาะ staff/admin
+
+ข้อสมมติ: เปิดจอง 08:00–20:00 · ล่วงหน้าไม่เกิน 30 วัน · 1–15 คน/การจอง · 3 กลุ่ม/45 คน ต่อช่วงเวลา · ผ่านกติกาแล้วยืนยันทันที (ยังไม่มีขั้นอนุมัติ)
+สีตามมาตรฐานปัจจุบัน (`primary-container` `#2154D9`) — palette `#004C99` เป็นของ design-system v1.3.0 ที่มาตรฐานระบุว่าห้ามใช้ (ui-design-system ข้อ 17.0 ใน standards v1.7.2+)
+
+## ตารางเรียนจริง ภาค 1/2569 (2026-10-06)
+
+ผลรันจริง (Linux, Node 22, pnpm 9.15.9, PostgreSQL 16) กับ standards v1.7.0
+
+```
+./standards/scripts/run-all-checks.sh .     → All 19 checks passed
+pnpm --filter backend test                  → 145 passed (11 suites)
+pnpm --filter backend test:e2e              → 73 passed (3 suites)
+rm -rf frontend/.next && pnpm -r lint/typecheck/build → ผ่าน
+prisma migrate deploy → seed → seed ซ้ำ → seed --reset → migrate diff → "No difference detected."
+```
+
+seed ได้ห้อง 11 ห้อง, `schedules` 48 แถว, `room_schedules` 48 แถว · รันซ้ำได้ `Created 0`
+บูต `dist/src/main.js` (`LOCAL_TEST_ROLE=staff`) แล้ว `GET /api/v1/schedules/status` ได้ 10 ห้องที่มีคาบ
+และคาบถัดไปตรงกับตารางของวันอังคาร (เวลาไทย) ทุกห้อง
+
+ไฟล์ที่แก้:
+- `backend/prisma/seed.ts` — ตารางเรียนจริงทุกชั้นปี (ยกเว้นวิชาศึกษาทั่วไป: ภาษาไทย ภาษาอังกฤษ เกษตรเพื่อชีวิต) ลงทั้ง `schedules` (หน้าแสดงผล) และ `room_schedules` (ตรวจการจองชนคาบเรียน), `--reset` ลบเฉพาะตารางเรียน
+- `backend/src/schedules/schedules.service.ts` — สถานะห้องเลิกใช้รายชื่อ `lab1–lab3` ที่เขียนตายตัว ใช้ทุกห้องที่มีคาบ และคิดเฉพาะคาบของ "วันนี้" ตามเวลาไทย (เดิมไม่กรองวัน ห้องจึงขึ้นว่ามีเรียนแม้เป็นคาบของวันอื่น)
+- `backend/src/schedules/bangkok-clock.ts` (+ spec) — วันและเวลาปัจจุบันตาม `Asia/Bangkok` ไม่ขึ้นกับ timezone ของ server
+- `backend/test/schedules.e2e-spec.ts` — ปรับเทสต์ตามพฤติกรรมใหม่ เพิ่มเคสตารางว่างและคาบของวันอื่น
+- `frontend/app/instructor/page.tsx` — ค่าเริ่มต้นห้องในฟอร์มเป็น `Lab คอม 3` แทน `lab1`
+
+ข้อสมมติ: "Labcom 3-4" = ใช้ Lab คอม 3 และ 4 พร้อมกัน (บันทึกห้องละแถว) · `instructor_name` ใส่ `ยังไม่ระบุ` เพราะตารางไม่มีชื่ออาจารย์ · เวลาคาบปี 1 อ่านจากภาพตาราง (มีเศษครึ่งชั่วโมง) · ชื่ออาคารของห้องบรรยาย/วิทย์/คณิตยังเป็นค่าเดา (มี TODO ใน seed)
+
 ## ผลรัน
 
 รันในเครื่อง (Windows, Git Bash) เมื่อ 2026-09-30 กับ standards v1.5.2

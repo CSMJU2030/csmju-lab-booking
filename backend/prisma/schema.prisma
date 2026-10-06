@@ -110,11 +110,13 @@ model Reservation {
   startTime   DateTime          @map("start_time") @db.Time(6)
   endTime     DateTime          @map("end_time") @db.Time(6)
   purpose     String
+  peopleCount Int               @default(1) @map("people_count")
   status      ReservationStatus @default(PENDING)
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @default(now()) @updatedAt @map("updated_at")
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
+  @@index([roomId, bookingDate])
   @@map("reservations")
 }
