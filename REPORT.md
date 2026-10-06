@@ -1,5 +1,30 @@
 # REPORT — csmju-lab-booking
 
+## จองห้องแบบเลือกวัน-เวลา + หน้าเว็บตามมาตรฐาน (2026-10-06)
+
+ผลรันจริง (Linux, Node 22, pnpm 9.15.9, PostgreSQL 16) กับ standards v1.7.0
+
+```
+./standards/scripts/run-all-checks.sh .     → All 19 checks passed
+pnpm --filter backend test                  → 150 passed
+pnpm --filter backend test:e2e              → 96 passed
+rm -rf frontend/.next && pnpm -r lint/typecheck/build → ผ่าน
+prisma migrate deploy (3 migrations) → migrate diff → "No difference detected."
+```
+
+ทดสอบกับ backend + frontend จริง (`LOCAL_TEST_ROLE`):
+- จองผ่านหน้าเว็บ → `POST /api/v1/reservations` 201 → หน้า "การจองของฉัน" แสดงรายการ · ยกเลิก 200 `{id, deleted:true}`
+- จองซ้อนตัวเอง 409 · ชนคาบเรียน 409 (บอกชื่อวิชาและเวลา) · วันย้อนหลัง 400 · body ผิด 400 `VALIDATION_ERROR`
+- STUDENT: จองได้ 201 · เพิ่มคาบ 403 · `scope=all` 403 — ALUMNI: จอง 403 — STAFF: ทำได้ทุกข้อ
+- มือถือ 360px อ่านได้ครบ
+
+สิ่งที่เปลี่ยน:
+- backend: `POST/GET/DELETE /api/v1/reservations`, `GET /api/v1/rooms`, `GET /api/v1/rooms/:id/availability` · permission `reservation:*` · migration `20261006000001_add_reservation_people_count` (เพิ่มคอลัมน์ ไม่แก้ของเดิม) · ล็อก `pg_advisory_xact_lock` ต่อห้อง+วันกันจองพร้อมกันจนเกินโควตา · `bangkok-clock` ย้ายไป `src/common/`
+- frontend: ใช้ template `csmju-subsystem-web` ของมาตรฐาน (AppShell, token, ฟอนต์ Noto Sans Thai / Plus Jakarta Sans ผ่าน `next/font`) · หน้า ห้องปฏิบัติการ / จองห้อง / การจองของฉัน / จัดการตารางเรียน · มี loading / empty / error ครบ · เมนูอาจารย์แสดงเฉพาะ staff/admin
+
+ข้อสมมติ: เปิดจอง 08:00–20:00 · ล่วงหน้าไม่เกิน 30 วัน · 1–15 คน/การจอง · 3 กลุ่ม/45 คน ต่อช่วงเวลา · ผ่านกติกาแล้วยืนยันทันที (ยังไม่มีขั้นอนุมัติ)
+สีตามมาตรฐานปัจจุบัน (`primary-container` `#2154D9`) — palette `#004C99` เป็นของ design-system v1.3.0 ที่มาตรฐานระบุว่าห้ามใช้ (ui-design-system ข้อ 17.0 ใน standards v1.7.2+)
+
 ## ตารางเรียนจริง ภาค 1/2569 (2026-10-06)
 
 ผลรันจริง (Linux, Node 22, pnpm 9.15.9, PostgreSQL 16) กับ standards v1.7.0
