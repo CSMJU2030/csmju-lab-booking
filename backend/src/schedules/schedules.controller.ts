@@ -46,6 +46,12 @@ export class SchedulesController {
     );
   }
 
+  @Get(':id')
+  @RequirePermissions(Permission.SCHEDULE_READ)
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.schedulesService.getSchedule(id);
+  }
+
   @Delete(':id')
   @RequirePermissions(Permission.SCHEDULE_DELETE)
   remove(@Param('id', ParseUUIDPipe) id: string) {

@@ -176,6 +176,29 @@ describe('Lab booking API (e2e)', () => {
     });
   });
 
+  describe('GET /api/v1/schedules/:id', () => {
+    it('returns one class', async () => {
+      const created = await http().post('/api/v1/schedules').set(as(staffToken)).send(validBody);
+      const id = created.body.data.id as string;
+
+      const res = await http().get(`/api/v1/schedules/${id}`).set(as(studentToken)).expect(200);
+      expect(res.body.data).toMatchObject({ id, courseCode: validBody.courseCode });
+    });
+
+    it('answers 404 NOT_FOUND for an unknown id', async () => {
+      const res = await http().get(`/api/v1/schedules/${NOT_FOUND_ID}`).set(as(staffToken)).expect(404);
+      expect(res.body).toMatchObject({ success: false, error: { code: 'NOT_FOUND' } });
+    });
+
+    it('answers 400 for an id that is not a uuid', async () => {
+      await http().get('/api/v1/schedules/not-a-uuid').set(as(staffToken)).expect(400);
+    });
+
+    it('still serves /status rather than treating it as an id', async () => {
+      await http().get('/api/v1/schedules/status').set(as(staffToken)).expect(200);
+    });
+  });
+
   describe('DELETE /api/v1/schedules/:id', () => {
     it('deletes and answers { id, deleted: true }', async () => {
       const created = await http().post('/api/v1/schedules').set(as(staffToken)).send(validBody);

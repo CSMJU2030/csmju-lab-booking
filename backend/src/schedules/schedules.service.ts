@@ -100,6 +100,14 @@ export class SchedulesService {
     return { items: rows.map((r) => this.toSchedule(r)), total };
   }
 
+  async getSchedule(id: string): Promise<Schedule> {
+    const row = await this.prisma.schedule.findUnique({ where: { id } });
+    if (!row) {
+      throw AppException.notFound('Schedule not found');
+    }
+    return this.toSchedule(row);
+  }
+
   async deleteSchedule(id: string): Promise<{ id: string; deleted: true }> {
     const existing = await this.prisma.schedule.findUnique({ where: { id } });
     if (!existing) {
