@@ -1,5 +1,29 @@
 # REPORT — csmju-lab-booking
 
+## ทดสอบกับ Core Hub จริงในเครื่อง + conformance (2026-10-06)
+
+ตาม `standards/docs/LOCAL_INTEGRATION_GUIDE.md` — Core Hub (3000/3100) + ระบบนี้ (3003/3002) บนเครื่อง AIE
+ลงทะเบียน `csmju-lab-booking` ใน BackOffice: callback `http://localhost:3002/auth/callback` ·
+mapping `student→STUDENT · alumni→ALUMNI · staff→STAFF · lecturer→STAFF · admin→ADMIN` (ไม่รับ guest) → approve → activate
+
+```
+node standards/conformance/run.js
+RESULT: 69 passed · 0 failed · 0 skipped · 0 warnings · retries: 0
+✅ CONFORMANT — csmju-lab-booking meets standard v1.2 L3
+```
+
+ทดสอบด้วยมือผ่าน SSO จริง (ไม่มี LOCAL_TEST_ROLE):
+- เปิดระบบโดยไม่ login → ไปหน้า login ของ Core Hub · หลัง login กลับมาหน้าแรก (`SSO_POST_LOGIN_REDIRECT=/`)
+- เข้าจากเมนู "ระบบย่อย" ใน Portal ได้โดยไม่ต้องใส่รหัสซ้ำ
+- staff: `/api/v1/me` → `user-003 · staff → STAFF` · มีเมนูจัดการตารางเรียน
+- student: ไม่มีเมนูอาจารย์ · เปิด `/instructor` เองได้หน้า "ไม่มีสิทธิ์" · จองได้
+- alumni: ไม่มีปุ่มจองและเมนูการจอง
+- ไม่มี token → `GET /api/v1/me` 401 · ออกจากระบบ → หน้ายืนยันของ Core Hub
+
+แก้ระหว่างทดสอบ: map `lecturer → STAFF` (authorization.md ข้อ 2) · หน้าหลัง login เป็น `/` แทน `/api/v1/me` ·
+ซ่อนเมนูการจองจากผู้ที่จองไม่ได้ · ประกาศ `probes` และ `core_hub_web_url` ใน `subsystem.yaml` ·
+เพิ่ม `GET /api/v1/schedules/:id` ให้ probe 404/400 ทดสอบได้
+
 ## จองห้องแบบเลือกวัน-เวลา + หน้าเว็บตามมาตรฐาน (2026-10-06)
 
 ผลรันจริง (Linux, Node 22, pnpm 9.15.9, PostgreSQL 16) กับ standards v1.7.0
