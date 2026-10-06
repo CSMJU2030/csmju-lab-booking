@@ -6,26 +6,27 @@ import { api } from "../lib/api";
 import {
   ROLE_LABELS,
   SessionContext,
+  canBook,
   canManageTimetable,
   type Me,
 } from "../lib/session";
 
 const DISPLAY_NAME = "ระบบจองห้องปฏิบัติการ";
 
-const BASE_NAV: NavItem[] = [
-  {
-    label: "ห้องปฏิบัติการ",
-    labelEn: "Rooms",
-    href: "/",
-    icon: "meeting-room",
-  },
-  {
-    label: "การจองของฉัน",
-    labelEn: "My bookings",
-    href: "/bookings",
-    icon: "event",
-  },
-];
+const ROOMS_NAV: NavItem = {
+  label: "ห้องปฏิบัติการ",
+  labelEn: "Rooms",
+  href: "/",
+  icon: "meeting-room",
+};
+
+/** เมนูการจอง — แสดงเฉพาะผู้ที่จองห้องได้ (ศิษย์เก่าดูได้อย่างเดียว) */
+const BOOKINGS_NAV: NavItem = {
+  label: "การจองของฉัน",
+  labelEn: "My bookings",
+  href: "/bookings",
+  icon: "event",
+};
 
 /** เมนูสำหรับอาจารย์ — แสดงเฉพาะผู้ที่จัดการตารางเรียนได้ */
 const INSTRUCTOR_NAV: NavItem = {
@@ -61,7 +62,12 @@ export default function Shell({
   }, []);
 
   const isInstructor = canManageTimetable(me);
-  const nav = isInstructor ? [...BASE_NAV, INSTRUCTOR_NAV] : BASE_NAV;
+  // ไม่มีสิทธิ์ = ไม่แสดงเมนู (ui-design-system.md ข้อ 9)
+  const nav: NavItem[] = [
+    ROOMS_NAV,
+    ...(canBook(me) ? [BOOKINGS_NAV] : []),
+    ...(isInstructor ? [INSTRUCTOR_NAV] : []),
+  ];
   // LOCAL_TEST_ROLE ของ backend: ไม่มี Core Hub จึงใช้อีเมล @localhost
   const isLocalTest = me?.email.endsWith("@localhost") ?? false;
 
