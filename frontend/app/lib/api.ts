@@ -17,10 +17,10 @@ type Envelope<T> =
   | { success: false; error: { code: string; message: string } };
 
 export type ApiResult<T> =
-  | { ok: true; status: number; data: T }
+  | { ok: true; status: number; data: T; meta?: Record<string, unknown> }
   | { ok: false; status: number; message: string };
 
-const LOOP_GUARD_KEY = 'lab_booking_sso_redirect_at';
+const LOOP_GUARD_KEY = "lab_booking_sso_redirect_at";
 const LOOP_GUARD_MS = 30_000;
 
 function startSso(): boolean {
@@ -44,25 +44,36 @@ export async function api<T>(
   let res: Response;
   try {
     res = await fetch(path, {
-      method: init.method ?? 'GET',
-      headers: init.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      method: init.method ?? "GET",
+      headers:
+        init.body !== undefined
+          ? { "Content-Type": "application/json" }
+          : undefined,
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
-      cache: 'no-store',
-      credentials: 'same-origin',
+      cache: "no-store",
+      credentials: "same-origin",
     });
   } catch {
-    return { ok: false, status: 0, message: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' };
+    return {
+      ok: false,
+      status: 0,
+      message: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้",
+    };
   }
 
   const body = (await res.json().catch(() => null)) as Envelope<T> | null;
 
   if (res.ok && body?.success) {
-    return { ok: true, status: res.status, data: body.data };
+    return { ok: true, status: res.status, data: body.data, meta: body.meta };
   }
 
   if (res.status === 401 && startSso()) {
     // The page is navigating away; hand back a pending-looking failure.
-    return { ok: false, status: 401, message: 'กำลังเข้าสู่ระบบผ่าน CSMJU Core Hub…' };
+    return {
+      ok: false,
+      status: 401,
+      message: "กำลังเข้าสู่ระบบผ่าน CSMJU Core Hub…",
+    };
   }
 
   return {
@@ -70,9 +81,9 @@ export async function api<T>(
     status: res.status,
     message:
       res.status === 401
-        ? 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง'
+        ? "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง"
         : res.status === 403
-          ? 'สิทธิ์ไม่เพียงพอ'
+          ? "สิทธิ์ไม่เพียงพอ"
           : body && !body.success
             ? body.error.message
             : `HTTP ${res.status}`,

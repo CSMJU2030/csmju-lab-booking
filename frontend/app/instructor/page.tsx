@@ -1,10 +1,28 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { api } from '../lib/api';
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import {
+  DeleteIcon,
+  MenuBookIcon,
+  Modal,
+  PageHeader,
+  cardClass,
+  dangerButtonClass,
+  iconDangerButtonClass,
+  inputClass,
+  primaryButtonClass,
+  secondaryButtonClass,
+  tdClass,
+  thClass,
+} from "@/csmju";
+import { api } from "../lib/api";
+import { DAY_LABELS, hhmm } from "../lib/format";
+import { canManageTimetable, useSession } from "../lib/session";
 
-interface CourseSchedule {
+type Room = { id: string; name: string };
+
+type Schedule = {
   id: string;
   courseCode: string;
   courseName: string;
@@ -13,289 +31,584 @@ interface CourseSchedule {
   day: string;
   startTime: string;
   endTime: string;
+};
+
+type Load =
+  | { state: "loading" }
+  | { state: "error"; message: string }
+  | { state: "ready"; items: Schedule[]; total: number; totalPages: number };
+
+const DAYS = [
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
+  "SUNDAY",
+];
+const LIMIT = 20;
+
+const TIMES: string[] = [];
+for (let m = 7 * 60; m <= 21 * 60; m += 30) {
+  TIMES.push(
+    `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`,
+  );
 }
 
-interface RoomStatusResponse {
-  roomName: string;
-  allSchedules?: CourseSchedule[];
-}
+const EMPTY_FORM = {
+  instructorName: "",
+  courseCode: "",
+  courseName: "",
+  roomName: "",
+  day: "MONDAY",
+  startTime: "09:00",
+  endTime: "12:00",
+};
 
-export default function InstructorDashboard() {
-  const [schedules, setSchedules] = useState<CourseSchedule[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-
-  const [formData, setFormData] = useState({
-    instructorName: '',
-    courseCode: '',
-    courseName: '',
-    roomName: 'Lab คอม 3',
-    day: 'MONDAY',
-    startTime: '09:00',
-    endTime: '12:00',
+async function fetchSchedules(
+  roomName: string,
+  day: string,
+  page: number,
+): Promise<Load> {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(LIMIT),
   });
+  if (roomName) params.set("roomName", roomName);
+  if (day) params.set("day", day);
+  const result = await api<Schedule[]>(`/api/v1/schedules?${params}`);
+  if (!result.ok) return { state: "error", message: result.message };
+  return {
+    state: "ready",
+    items: result.data,
+    total: Number(result.meta?.total ?? result.data.length),
+    totalPages: Number(result.meta?.totalPages ?? 1),
+  };
+}
 
-  const fetchSchedules = useCallback(async () => {
-    try {
-      const result = await api<RoomStatusResponse[]>('/api/v1/schedules/status');
-      if (!result.ok) throw new Error(result.message);
-      const data = result.data;
+export default function InstructorPage() {
+  const me = useSession();
 
-      const allSch: CourseSchedule[] = [];
-      if (Array.isArray(data)) {
-        data.forEach((room) => {
-          if (room.allSchedules && Array.isArray(room.allSchedules)) {
-            room.allSchedules.forEach((sch) => {
-              allSch.push({
-                ...sch,
-                roomName: room.roomName,
-              });
-            });
-          }
-        });
+  if (me && !canManageTimetable(me)) {
+    return (
+      <div className={`${cardClass} space-y-4 px-6 py-12 text-center`}>
+        <p className="text-body-md text-on-surface">
+          คุณไม่มีสิทธิ์เข้าถึงส่วนนี้ หากคิดว่าเป็นข้อผิดพลาด
+          กรุณาติดต่อผู้ดูแลระบบย่อยนี้
+        </p>
+        <Link href="/" className={`${secondaryButtonClass} inline-block`}>
+          กลับหน้าหลัก
+        </Link>
+      </div>
+    );
+  }
+
+  return <Timetable />;
+}
+
+function Timetable() {
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [roomFilter, setRoomFilter] = useState("");
+  const [dayFilter, setDayFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [load, setLoad] = useState<Load>({ state: "loading" });
+
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [toDelete, setToDelete] = useState<Schedule | null>(null);
+
+  useEffect(() => {
+    let current = true;
+    api<Room[]>("/api/v1/rooms").then((result) => {
+      if (current && result.ok) {
+        setRooms(result.data);
+        setForm((f) =>
+          f.roomName ? f : { ...f, roomName: result.data[0]?.name ?? "" },
+        );
       }
-      return allSch;
-    } catch (err) {
-      console.error('Error fetching schedules:', err);
-      return [];
-    }
+    });
+    return () => {
+      current = false;
+    };
   }, []);
 
   useEffect(() => {
-    let isCurrent = true;
-    fetchSchedules().then((nextSchedules) => {
-      if (isCurrent) {
-        setSchedules(nextSchedules);
-        setLoading(false);
-      }
+    let current = true;
+    fetchSchedules(roomFilter, dayFilter, page).then((next) => {
+      if (current) setLoad(next);
     });
-
     return () => {
-      isCurrent = false;
+      current = false;
     };
-  }, [fetchSchedules]);
+  }, [roomFilter, dayFilter, page]);
 
-  const refreshSchedules = async () => {
-    setSchedules(await fetchSchedules());
-  };
+  const reload = useCallback(() => {
+    setLoad({ state: "loading" });
+    fetchSchedules(roomFilter, dayFilter, page).then(setLoad);
+  }, [roomFilter, dayFilter, page]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.roomName.trim()) {
-      alert('กรุณากรอกชื่อห้องปฏิบัติการ');
+  const set =
+    (field: keyof typeof EMPTY_FORM) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const missing = (
+      ["courseCode", "courseName", "instructorName", "roomName"] as const
+    ).filter((field) => !form[field].trim());
+    if (missing.length > 0) {
+      setFormError("กรุณากรอกช่องที่มี * ให้ครบ");
+      return;
+    }
+    if (form.endTime <= form.startTime) {
+      setFormError("เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่ม");
       return;
     }
 
-    setSubmitting(true);
-
-    try {
-      const res = await api('/api/v1/schedules', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (res.ok) {
-        alert('✅ บันทึกข้อมูลรายวิชาเรียบร้อยแล้ว!');
-        setFormData({
-          instructorName: '',
-          courseCode: '',
-          courseName: '',
-          roomName: 'Lab คอม 3',
-          day: 'MONDAY',
-          startTime: '09:00',
-          endTime: '12:00',
-        });
-        await refreshSchedules();
-      } else {
-        alert(`❌ เกิดข้อผิดพลาด: ${res.message}`);
-      }
-    } catch (err) {
-      console.error(err);
-      alert('❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
-    } finally {
-      setSubmitting(false);
+    setSaving(true);
+    setFormError(null);
+    const result = await api("/api/v1/schedules", {
+      method: "POST",
+      body: form,
+    });
+    setSaving(false);
+    if (result.ok) {
+      setNotice(
+        `เพิ่มคาบ ${form.courseCode} ใน ${form.roomName} เรียบร้อยแล้ว`,
+      );
+      setForm((f) => ({ ...EMPTY_FORM, roomName: f.roomName, day: f.day }));
+      reload();
+    } else {
+      setFormError(result.message);
     }
   };
 
-  const handleDelete = async (id: string, courseCode: string) => {
-    if (!confirm(`ต้องการลบวิชา ${courseCode} ออกจากระบบใช่หรือไม่?`)) return;
-
-    try {
-      const res = await api(`/api/v1/schedules/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (res.ok) {
-        alert('🗑️ ลบตารางวิชาเรียบร้อยแล้ว');
-        await refreshSchedules();
-      } else {
-        alert(`❌ ไม่สามารถลบได้: ${res.message}`);
-      }
-    } catch (err) {
-      console.error(err);
-      alert('❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+  const remove = async () => {
+    if (!toDelete) return;
+    const target = toDelete;
+    setToDelete(null);
+    const result = await api(`/api/v1/schedules/${target.id}`, {
+      method: "DELETE",
+    });
+    if (result.ok) {
+      setNotice(`ลบคาบ ${target.courseCode} ออกจากตารางเรียนแล้ว`);
+      reload();
+    } else {
+      setLoad({ state: "error", message: result.message });
     }
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 p-4 sm:p-8 text-slate-900">
-      <div className="max-w-4xl mx-auto">
+    <>
+      <PageHeader
+        title="จัดการตารางเรียน"
+        description="เพิ่มหรือลบคาบเรียนของห้องปฏิบัติการ คาบที่อยู่ในตารางจะกันไม่ให้ผู้อื่นจองห้องช่วงเวลานั้น"
+      />
 
-        <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+      {notice && (
+        <p
+          role="status"
+          className="rounded-lg bg-success/10 px-4 py-3 text-body-md text-emerald-700"
+        >
+          {notice}
+        </p>
+      )}
+
+      <div className="grid gap-8 lg:grid-cols-3">
+        <form
+          onSubmit={save}
+          noValidate
+          className={`${cardClass} space-y-4 p-6`}
+          aria-labelledby="add-heading"
+        >
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
-              👨‍🏫 ระบบจัดการตารางสอน (สำหรับอาจารย์ / Admin)
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500">
-              เพิ่มและจัดการตารางเรียนห้องปฏิบัติการด้วยสิทธิ์ผู้ดูแลระบบ
+            <h2
+              id="add-heading"
+              className="font-display text-headline-md text-on-surface"
+            >
+              เพิ่มคาบเรียน
+            </h2>
+            <p className="text-body-md text-on-surface-variant">
+              ช่องที่มี * จำเป็นต้องกรอก
             </p>
           </div>
-          <Link
-            href="/"
-            className="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs sm:text-sm font-semibold px-4 py-2 rounded-xl transition"
-          >
-            ← กลับหน้าหลักนักศึกษา
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit">
-            <h2 className="text-base font-bold text-slate-800 mb-4">➕ เพิ่มตารางเรียนใหม่</h2>
+          {formError && (
+            <p
+              role="alert"
+              className="rounded-lg bg-error-container px-4 py-3 text-body-md text-on-error-container"
+            >
+              {formError}
+            </p>
+          )}
 
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">ชื่อผู้สอน</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="เช่น อ.ดร.สมชาย ใจดี"
-                  value={formData.instructorName}
-                  onChange={(e) => setFormData({ ...formData, instructorName: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">รหัสวิชา</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="เช่น คม327"
-                    value={formData.courseCode}
-                    onChange={(e) => setFormData({ ...formData, courseCode: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">ห้องปฏิบัติการ</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="เช่น Lab คอม 3"
-                    value={formData.roomName}
-                    onChange={(e) => setFormData({ ...formData, roomName: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">ชื่อวิชา</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="เช่น การพัฒนาเว็บแอปพลิเคชัน"
-                  value={formData.courseName}
-                  onChange={(e) => setFormData({ ...formData, courseName: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">วันในสัปดาห์</label>
-                <select
-                  value={formData.day}
-                  onChange={(e) => setFormData({ ...formData, day: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
-                >
-                  <option value="MONDAY">วันจันทร์</option>
-                  <option value="TUESDAY">วันอังคาร</option>
-                  <option value="WEDNESDAY">วันพุธ</option>
-                  <option value="THURSDAY">วันพฤหัสบดี</option>
-                  <option value="FRIDAY">วันศุกร์</option>
-                  <option value="SATURDAY">วันเสาร์</option>
-                  <option value="SUNDAY">วันอาทิตย์</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">เวลาเริ่มต้น</label>
-                  <input
-                    type="time"
-                    required
-                    value={formData.startTime}
-                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">เวลาสิ้นสุด</label>
-                  <input
-                    type="time"
-                    required
-                    value={formData.endTime}
-                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg transition text-sm shadow-md mt-2 disabled:bg-slate-400"
+          <Field id="courseCode" label="รหัสวิชา">
+            <input
+              id="courseCode"
+              value={form.courseCode}
+              onChange={set("courseCode")}
+              maxLength={50}
+              aria-required="true"
+              placeholder="เช่น 10301111"
+              className={inputClass}
+            />
+          </Field>
+          <Field id="courseName" label="ชื่อวิชา">
+            <input
+              id="courseName"
+              value={form.courseName}
+              onChange={set("courseName")}
+              maxLength={200}
+              aria-required="true"
+              className={inputClass}
+            />
+          </Field>
+          <Field id="instructorName" label="ผู้สอน">
+            <input
+              id="instructorName"
+              value={form.instructorName}
+              onChange={set("instructorName")}
+              maxLength={200}
+              aria-required="true"
+              className={inputClass}
+            />
+          </Field>
+          <Field id="roomName" label="ห้อง">
+            <select
+              id="roomName"
+              value={form.roomName}
+              onChange={set("roomName")}
+              aria-required="true"
+              className={inputClass}
+            >
+              {rooms.map((r) => (
+                <option key={r.id} value={r.name}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field id="day" label="วัน">
+            <select
+              id="day"
+              value={form.day}
+              onChange={set("day")}
+              aria-required="true"
+              className={inputClass}
+            >
+              {DAYS.map((d) => (
+                <option key={d} value={d}>
+                  {DAY_LABELS[d]}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field id="startTime" label="เวลาเริ่ม">
+              <select
+                id="startTime"
+                value={form.startTime}
+                onChange={set("startTime")}
+                aria-required="true"
+                className={inputClass}
               >
-                {submitting ? 'กำลังบันทึก...' : '💾 บันทึกตารางสอน'}
-              </button>
-            </form>
+                {TIMES.map((t) => (
+                  <option key={t} value={t}>
+                    {t} น.
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field id="endTime" label="เวลาสิ้นสุด">
+              <select
+                id="endTime"
+                value={form.endTime}
+                onChange={set("endTime")}
+                aria-required="true"
+                className={inputClass}
+              >
+                {TIMES.map((t) => (
+                  <option key={t} value={t}>
+                    {t} น.
+                  </option>
+                ))}
+              </select>
+            </Field>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <h2 className="text-base font-bold text-slate-800 mb-4">📋 รายการตารางเรียนในระบบทั้งหมด</h2>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() =>
+                setForm((f) => ({ ...EMPTY_FORM, roomName: f.roomName }))
+              }
+              className={secondaryButtonClass}
+            >
+              ล้างฟอร์ม
+            </button>
+            <button
+              type="submit"
+              aria-busy={saving}
+              className={`${primaryButtonClass} relative ${saving ? "btn-loading" : ""}`}
+            >
+              <span className="btn-text flex items-center gap-2">
+                บันทึกคาบเรียน
+              </span>
+              <span className="dots" aria-hidden>
+                <span />
+                <span />
+                <span />
+              </span>
+            </button>
+          </div>
+        </form>
 
-            {loading ? (
-              <p className="text-xs text-slate-400">กำลังโหลดข้อมูล...</p>
-            ) : schedules.length === 0 ? (
-              <p className="text-xs text-slate-400 py-6 text-center">ยังไม่มีตารางเรียนในระบบ</p>
-            ) : (
-              <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
-                {schedules.map((sch) => (
-                  <div key={sch.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center text-xs">
-                    <div>
-                      <span className="font-bold text-blue-700 text-sm">
-                        {sch.courseCode} - {sch.courseName}
-                      </span>
-                      <p className="text-slate-600 mt-0.5">ห้อง: <strong className="text-slate-800">{sch.roomName}</strong> | ผู้สอน: {sch.instructorName}</p>
-                      <p className="font-mono text-[11px] text-slate-500 mt-1">
-                        🗓️ {sch.day} ({sch.startTime} - {sch.endTime} น.)
-                      </p>
-                    </div>
+        <section
+          className={`${cardClass} lg:col-span-2`}
+          aria-labelledby="list-heading"
+        >
+          <div className="flex flex-col gap-4 border-b border-outline-variant/40 px-6 py-5 md:flex-row md:items-center md:justify-between">
+            <h2
+              id="list-heading"
+              className="font-display text-headline-md text-on-surface"
+            >
+              ตารางเรียนทั้งหมด
+            </h2>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <label htmlFor="filter-room" className="sr-only">
+                กรองตามห้อง
+              </label>
+              <select
+                id="filter-room"
+                value={roomFilter}
+                onChange={(e) => {
+                  setRoomFilter(e.target.value);
+                  setPage(1);
+                }}
+                className={`${inputClass} md:w-48`}
+              >
+                <option value="">ทุกห้อง</option>
+                {rooms.map((r) => (
+                  <option key={r.id} value={r.name}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="filter-day" className="sr-only">
+                กรองตามวัน
+              </label>
+              <select
+                id="filter-day"
+                value={dayFilter}
+                onChange={(e) => {
+                  setDayFilter(e.target.value);
+                  setPage(1);
+                }}
+                className={`${inputClass} md:w-40`}
+              >
+                <option value="">ทุกวัน</option>
+                {DAYS.map((d) => (
+                  <option key={d} value={d}>
+                    {DAY_LABELS[d]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {load.state === "loading" && (
+            <div aria-busy="true" className="space-y-3 px-6 py-5">
+              <span className="sr-only">กำลังโหลดข้อมูล...</span>
+              {Array.from({ length: 5 }, (_, i) => (
+                <div
+                  key={i}
+                  className="h-10 animate-pulse rounded-lg bg-surface-container"
+                />
+              ))}
+            </div>
+          )}
+
+          {load.state === "error" && (
+            <div role="alert" className="space-y-4 px-6 py-12 text-center">
+              <p className="text-body-md text-on-surface">{load.message}</p>
+              <button
+                type="button"
+                onClick={reload}
+                className={secondaryButtonClass}
+              >
+                ลองอีกครั้ง
+              </button>
+            </div>
+          )}
+
+          {load.state === "ready" && load.items.length === 0 && (
+            <div className="space-y-3 px-6 py-12 text-center">
+              <MenuBookIcon className="mx-auto h-10 w-10 text-outline" />
+              {roomFilter || dayFilter ? (
+                <>
+                  <p className="text-body-md text-on-surface-variant">
+                    ไม่พบคาบเรียนตามตัวกรองที่เลือก
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRoomFilter("");
+                      setDayFilter("");
+                    }}
+                    className={secondaryButtonClass}
+                  >
+                    ล้างตัวกรอง
+                  </button>
+                </>
+              ) : (
+                <p className="text-body-md text-on-surface-variant">
+                  ยังไม่มีคาบเรียน เริ่มจากเพิ่มคาบแรกด้วยฟอร์มด้านข้าง
+                </p>
+              )}
+            </div>
+          )}
+
+          {load.state === "ready" && load.items.length > 0 && (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-outline-variant/40 bg-surface text-label-md text-on-surface-variant">
+                      <th className={thClass}>วิชา</th>
+                      <th className={thClass}>ห้อง</th>
+                      <th className={thClass}>วัน</th>
+                      <th className={thClass}>เวลา</th>
+                      <th className={`${thClass} text-right`}>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {load.items.map((s) => (
+                      <tr
+                        key={s.id}
+                        className="border-b border-outline-variant/40 text-body-md last:border-0 hover:bg-surface/50"
+                      >
+                        <td className={tdClass}>
+                          <span className="font-medium text-on-surface">
+                            {s.courseCode}
+                          </span>
+                          <span className="block text-on-surface-variant">
+                            {s.courseName}
+                          </span>
+                        </td>
+                        <td className={`${tdClass} whitespace-nowrap`}>
+                          {s.roomName}
+                        </td>
+                        <td className={`${tdClass} whitespace-nowrap`}>
+                          {DAY_LABELS[s.day] ?? s.day}
+                        </td>
+                        <td
+                          className={`${tdClass} whitespace-nowrap tabular-nums text-on-surface-variant`}
+                        >
+                          {hhmm(s.startTime)}–{hhmm(s.endTime)} น.
+                        </td>
+                        <td className={`${tdClass} text-right`}>
+                          <button
+                            type="button"
+                            onClick={() => setToDelete(s)}
+                            aria-label={`ลบคาบ ${s.courseCode} ${s.roomName}`}
+                            className={iconDangerButtonClass}
+                          >
+                            <DeleteIcon className="h-5 w-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {load.totalPages > 1 && (
+                <nav
+                  aria-label="เปลี่ยนหน้า"
+                  className="flex items-center justify-between border-t border-outline-variant/40 px-6 py-4"
+                >
+                  <span className="text-body-md tabular-nums text-on-surface-variant">
+                    หน้า {page} จาก {load.totalPages} · ทั้งหมด {load.total} คาบ
+                  </span>
+                  <div className="flex gap-3">
                     <button
-                      onClick={() => handleDelete(sch.id, sch.courseCode)}
-                      className="bg-red-100 hover:bg-red-200 text-red-700 font-bold px-2.5 py-1.5 rounded-lg transition"
+                      type="button"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => p - 1)}
+                      className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
                     >
-                      🗑️ ลบ
+                      ก่อนหน้า
+                    </button>
+                    <button
+                      type="button"
+                      disabled={page >= load.totalPages}
+                      onClick={() => setPage((p) => p + 1)}
+                      className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
+                    >
+                      ถัดไป
                     </button>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
+                </nav>
+              )}
+            </>
+          )}
+        </section>
       </div>
-    </main>
+
+      {toDelete && (
+        <Modal title="ลบคาบเรียน" onClose={() => setToDelete(null)}>
+          <p className="text-body-md text-on-surface-variant">
+            ลบคาบ{" "}
+            <strong className="text-on-surface">
+              {toDelete.courseCode} {toDelete.courseName}
+            </strong>{" "}
+            ({toDelete.roomName} วัน{DAY_LABELS[toDelete.day]}{" "}
+            {hhmm(toDelete.startTime)}–{hhmm(toDelete.endTime)} น.)?
+            หลังลบแล้วช่วงเวลานี้จะเปิดให้จองห้องได้
+          </p>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setToDelete(null)}
+              className={secondaryButtonClass}
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="button"
+              onClick={remove}
+              className={dangerButtonClass}
+            >
+              ลบคาบเรียน
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function Field({
+  id,
+  label,
+  children,
+}: {
+  id: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <label htmlFor={id} className="block text-label-md text-on-surface">
+        {label}{" "}
+        <span aria-hidden className="text-error">
+          *
+        </span>
+      </label>
+      {children}
+    </div>
   );
 }
