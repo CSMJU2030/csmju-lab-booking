@@ -100,9 +100,11 @@ pnpm --filter backend generate:openapi
 | student | STUDENT | ดูตารางและสถานะห้อง + จองห้อง / ดู / ยกเลิกการจองของตัวเอง |
 | alumni | ALUMNI | ดูตารางและสถานะห้อง |
 | staff | STAFF | ทุกอย่างของ student + เพิ่ม/ลบตารางเรียน + ดู/ยกเลิกการจองของทุกคน |
+| lecturer | STAFF | เหมือน staff (อาจารย์) |
 | admin | ADMIN | ทุกอย่าง |
+| guest | — | เข้าไม่ได้ (403) |
 
-อาจารย์ใช้ core role `staff` (ยังไม่มี role `lecturer` ในมาตรฐานเวอร์ชันนี้) · เมนู "จัดการตารางเรียน" และปุ่ม "เพิ่มคาบเรียน" แสดงเฉพาะ staff/admin
+อาจารย์ใช้ core role `lecturer` ซึ่ง map เป็น `STAFF` ตาม authorization.md ข้อ 2 · ทะเบียนใน Core Hub ต้องใช้ mapping เดียวกับ `backend/src/auth/role-mapping.ts` เป๊ะ: `student→STUDENT · alumni→ALUMNI · staff→STAFF · lecturer→STAFF · admin→ADMIN` · เมนู "จัดการตารางเรียน" และปุ่ม "เพิ่มคาบเรียน" แสดงเฉพาะ staff/admin
 permission ทั้งหมดอยู่ที่ `backend/src/auth/permissions.ts` ที่เดียว
 
 ## การจองห้อง

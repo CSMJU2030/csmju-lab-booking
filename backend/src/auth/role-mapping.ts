@@ -8,7 +8,11 @@ import { SubsystemRole } from './core-hub-identity';
  *   student            STUDENT
  *   alumni             ALUMNI
  *   staff              STAFF
+ *   lecturer           STAFF   (อาจารย์ใช้สิทธิ์ชุดเดียวกับเจ้าหน้าที่ในระบบนี้)
  *   admin              ADMIN
+ *
+ * `guest` ตั้งใจไม่ใส่ — ระบบจองห้องไม่เปิดให้บุคคลภายนอก (Core Hub ตอบ 403 ตั้งแต่ก่อนเข้าระบบ)
+ * ตารางนี้ต้องตรงกับ defaultRoleMapping ในทะเบียนของ Core Hub เป๊ะ (authorization.md ข้อ 2)
  *
  * The mapping is explicit and lives only in this subsystem. The Core Hub role
  * vocabulary can change without changing subsystem authorization logic - only
@@ -18,6 +22,7 @@ export const CORE_ROLE_TO_SUBSYSTEM_ROLE: Readonly<Record<string, SubsystemRole>
   student: SubsystemRole.STUDENT,
   alumni: SubsystemRole.ALUMNI,
   staff: SubsystemRole.STAFF,
+  lecturer: SubsystemRole.STAFF,
   admin: SubsystemRole.ADMIN,
 });
 
