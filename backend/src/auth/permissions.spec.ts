@@ -11,6 +11,26 @@ describe('Subsystem permission model (spec §15, §16)', () => {
     });
   });
 
+  describe('bookings', () => {
+    it('lets a student book and cancel only their own bookings', () => {
+      const role = SubsystemRole.STUDENT;
+      expect(can(role, Permission.RESERVATION_CREATE_OWN)).toBe(true);
+      expect(can(role, Permission.RESERVATION_READ_OWN)).toBe(true);
+      expect(can(role, Permission.RESERVATION_DELETE_OWN)).toBe(true);
+      expect(can(role, Permission.RESERVATION_READ_ANY)).toBe(false);
+      expect(can(role, Permission.RESERVATION_DELETE_ANY)).toBe(false);
+    });
+
+    it('does not let alumni book', () => {
+      expect(can(SubsystemRole.ALUMNI, Permission.RESERVATION_CREATE_OWN)).toBe(false);
+    });
+
+    it('lets staff see and cancel every booking', () => {
+      expect(can(SubsystemRole.STAFF, Permission.RESERVATION_READ_ANY)).toBe(true);
+      expect(can(SubsystemRole.STAFF, Permission.RESERVATION_DELETE_ANY)).toBe(true);
+    });
+  });
+
   describe('STAFF', () => {
     it('maintains the lab timetables', () => {
       const role = SubsystemRole.STAFF;

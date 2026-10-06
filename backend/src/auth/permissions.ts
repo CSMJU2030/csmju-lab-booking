@@ -16,21 +16,40 @@ export enum Permission {
 
   /** Check whether a room is free at a given time. */
   ROOM_READ = 'room:read',
+
+  /** Book a lab for yourself. */
+  RESERVATION_CREATE_OWN = 'reservation:create:own',
+  /** See your own bookings / everyone's bookings. */
+  RESERVATION_READ_OWN = 'reservation:read:own',
+  RESERVATION_READ_ANY = 'reservation:read:any',
+  /** Cancel your own booking / anyone's booking. */
+  RESERVATION_DELETE_OWN = 'reservation:delete:own',
+  RESERVATION_DELETE_ANY = 'reservation:delete:any',
 }
 
 const READ_ONLY: Permission[] = [Permission.SCHEDULE_READ, Permission.ROOM_READ];
 
-/** Students look at timetables and room availability. */
-const STUDENT_PERMISSIONS: Permission[] = [...READ_ONLY];
+/** Booking a lab for yourself, seeing and cancelling your own bookings. */
+const OWN_BOOKINGS: Permission[] = [
+  Permission.RESERVATION_CREATE_OWN,
+  Permission.RESERVATION_READ_OWN,
+  Permission.RESERVATION_DELETE_OWN,
+];
 
-/** Alumni get the same read-only view. */
+/** Students look at timetables and room availability, and book labs. */
+const STUDENT_PERMISSIONS: Permission[] = [...READ_ONLY, ...OWN_BOOKINGS];
+
+/** Alumni get the read-only view (no booking). */
 const ALUMNI_PERMISSIONS: Permission[] = [...READ_ONLY];
 
-/** Staff (including lecturers) maintain the lab timetables. */
+/** Staff (including lecturers) maintain the lab timetables and manage every booking. */
 const STAFF_PERMISSIONS: Permission[] = [
   ...READ_ONLY,
   Permission.SCHEDULE_CREATE,
   Permission.SCHEDULE_DELETE,
+  ...OWN_BOOKINGS,
+  Permission.RESERVATION_READ_ANY,
+  Permission.RESERVATION_DELETE_ANY,
 ];
 
 const ADMIN_PERMISSIONS: Permission[] = Object.values(Permission);

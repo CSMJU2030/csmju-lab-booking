@@ -3,7 +3,7 @@ import { DayOfWeek, Prisma } from '../../generated/prisma/client';
 import { AppException } from '../common/errors';
 import { PrismaService } from '../prisma/prisma.service';
 import { fromTimeDate, toTimeDate } from '../prisma/time.util';
-import { bangkokClock } from './bangkok-clock';
+import { bangkokClock } from '../common/bangkok-clock';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { QuerySchedulesDto } from './dto/query-schedules.dto';
 

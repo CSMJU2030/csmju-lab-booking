@@ -9,7 +9,7 @@ import request from 'supertest';
 import { bootApp } from './helpers/boot-app';
 import { FakeCoreHub } from './helpers/fake-core-hub';
 import { InMemoryPrisma } from './helpers/in-memory-prisma';
-import { bangkokClock } from '../src/schedules/bangkok-clock';
+import { bangkokClock } from '../src/common/bangkok-clock';
 import { TestSigningKey, createSigningKey, signCoreHubToken } from './helpers/token-factory';
 
 const NOT_FOUND_ID = '99999999-9999-4999-8999-999999999999';
