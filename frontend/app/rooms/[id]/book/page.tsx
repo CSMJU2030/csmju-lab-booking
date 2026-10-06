@@ -241,12 +241,12 @@ export default function BookRoomPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid gap-8 lg:grid-cols-5">
+        <div className="grid gap-8 xl:grid-cols-5">
           <form
             id={formId}
             onSubmit={submit}
             noValidate
-            className={`${cardClass} space-y-4 p-6 lg:col-span-2`}
+            className={`${cardClass} space-y-4 p-6 xl:col-span-2`}
             aria-describedby={`${formId}-required`}
           >
             <p
@@ -395,7 +395,7 @@ export default function BookRoomPage() {
           </form>
 
           <section
-            className={`${cardClass} p-6 lg:col-span-3`}
+            className={`${cardClass} order-first min-w-0 p-6 xl:order-none xl:col-span-3`}
             aria-labelledby="day-heading"
           >
             <h2
@@ -490,10 +490,12 @@ function DayTimeline({
 
   return (
     <div className="space-y-6">
-      <div className="overflow-x-auto">
-        <div className="min-w-xl space-y-2">
+      <div>
+        <div className="space-y-2">
           <div className="relative h-5">
+            {/* ป้ายเวลาทุก 2 ชั่วโมง ให้เห็นครบทั้งวันโดยไม่ต้องเลื่อน แม้จอแคบ (เส้นแบ่งยังมีทุกชั่วโมง) */}
             {hours.map((m, i) => (
+              i % 2 === 1 ? null : (
               <span
                 key={m}
                 className={`absolute text-label-sm tabular-nums text-on-surface-variant ${
@@ -507,6 +509,7 @@ function DayTimeline({
               >
                 {fromMinutes(m).slice(0, 2)}
               </span>
+              )
             ))}
           </div>
 

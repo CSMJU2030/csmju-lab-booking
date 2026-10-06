@@ -218,14 +218,14 @@ function Timetable() {
         </p>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-3">
+      <div className="grid gap-8 2xl:grid-cols-3">
         <form
           onSubmit={save}
           noValidate
-          className={`${cardClass} space-y-4 p-6`}
+          className={`${cardClass} grid content-start gap-4 p-6 md:grid-cols-2 2xl:grid-cols-1`}
           aria-labelledby="add-heading"
         >
-          <div>
+          <div className="md:col-span-2 2xl:col-span-1">
             <h2
               id="add-heading"
               className="font-display text-headline-md text-on-surface"
@@ -240,7 +240,7 @@ function Timetable() {
           {formError && (
             <p
               role="alert"
-              className="rounded-lg bg-error-container px-4 py-3 text-body-md text-on-error-container"
+              className="rounded-lg bg-error-container px-4 py-3 text-body-md text-on-error-container md:col-span-2 2xl:col-span-1"
             >
               {formError}
             </p>
@@ -340,7 +340,7 @@ function Timetable() {
             </Field>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-3 pt-2 md:col-span-2 2xl:col-span-1">
             <button
               type="button"
               onClick={() =>
@@ -368,17 +368,17 @@ function Timetable() {
         </form>
 
         <section
-          className={`${cardClass} lg:col-span-2`}
+          className={`${cardClass} min-w-0 2xl:col-span-2`}
           aria-labelledby="list-heading"
         >
-          <div className="flex flex-col gap-4 border-b border-outline-variant/40 px-6 py-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant/40 px-6 py-5">
             <h2
               id="list-heading"
-              className="font-display text-headline-md text-on-surface"
+              className="shrink-0 whitespace-nowrap font-display text-headline-md text-on-surface"
             >
               ตารางเรียนทั้งหมด
             </h2>
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex flex-wrap gap-3">
               <label htmlFor="filter-room" className="sr-only">
                 กรองตามห้อง
               </label>
@@ -475,7 +475,7 @@ function Timetable() {
           {load.state === "ready" && load.items.length > 0 && (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left">
+                <table className="w-full min-w-2xl border-collapse text-left">
                   <thead>
                     <tr className="border-b border-outline-variant/40 bg-surface text-label-md text-on-surface-variant">
                       <th className={thClass}>วิชา</th>
