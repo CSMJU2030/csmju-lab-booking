@@ -133,7 +133,7 @@ describe('configuration', () => {
       }
 
       expect(configuration().database).toMatchObject({
-        poolMax: 10,
+        poolMax: 5,
         connectTimeoutMs: 5000,
         statementTimeoutMs: 5000,
         idleInTransactionTimeoutMs: 10_000,

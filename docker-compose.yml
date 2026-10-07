@@ -1,85 +1,90 @@
-# Lab Booking runs its own API and its own PostgreSQL instance.
-# It never connects to the Core Hub database - only to the Core Hub JWKS URL.
+# ทดสอบ image แบบเดียวกับ server ในเครื่อง — docs/deployment.md ข้อ 6
+#   docker compose up -d --build   → db + api + web ต้อง healthy
+#   เปิด http://localhost:3002 (callback ที่ลงทะเบียนไว้ใน Core Hub)
+#
+# ชื่อ service "api" และพอร์ต 4000 ห้ามเปลี่ยน — frontend/Dockerfile ฝัง http://api:4000 ไว้ตอน build (ข้อ 3.2)
+# api และ web ล็อกแบบเดียวกับ server: read_only · cap_drop ALL · no-new-privileges · จำกัด RAM · หมุน log
+# ฐานข้อมูลเป็นของระบบนี้เอง ไม่เคยต่อฐานของ Core Hub — ต่อ Core Hub ผ่าน HTTPS (JWKS) เท่านั้น
+
+x-hardening: &hardening
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: '3'
+
 services:
-  lab-booking-db:
+  db:
     image: postgres:16-alpine
-    container_name: lab-booking-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: lab_booking_db
-    ports:
-      # 5434 on the host so it cannot collide with a Core Hub database on 5432
-      - '5434:5432'
+      POSTGRES_USER: lab_booking
+      POSTGRES_PASSWORD: lab_booking_local_only
+      POSTGRES_DB: lab_booking
     volumes:
       - lab-booking-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d lab_booking_db']
+      test: ['CMD-SHELL', 'pg_isready -U lab_booking -d lab_booking']
       interval: 5s
       timeout: 5s
       retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
 
-  lab-booking-api:
+  api:
+    <<: *hardening
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: lab-booking-api
     restart: unless-stopped
     depends_on:
-      lab-booking-db:
+      db:
         condition: service_healthy
+    mem_limit: 512m
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3003
-      DATABASE_URL: postgresql://postgres:postgres@lab-booking-db:5432/lab_booking_db
-      # The Core Hub usually runs on the host machine during the demo.
-      CORE_HUB_URL: ${CORE_HUB_URL:-http://host.docker.internal:3000}
-      CORE_HUB_JWKS_URL: ${CORE_HUB_JWKS_URL:-http://host.docker.internal:3000/api/v1/.well-known/jwks.json}
-      CORE_HUB_ISSUER: ${CORE_HUB_ISSUER:-core-hub}
-      CORE_HUB_AUDIENCE: ${CORE_HUB_AUDIENCE:-csmju2030}
-      SUBSYSTEM_ID: ${SUBSYSTEM_ID:-csmju-lab-booking}
-      SUBSYSTEM_NAME: ${SUBSYSTEM_NAME:-CSMJU Lab Booking}
-      # Central SSO: /auth/login sends the BROWSER here, so this is the address
-      # the browser uses - never a Docker-internal name like core-hub-web.
-      CORE_HUB_WEB_URL: ${CORE_HUB_WEB_URL:-http://localhost:3100}
-      SSO_STATE_TTL_SEC: ${SSO_STATE_TTL_SEC:-600}
-      SSO_POST_LOGIN_REDIRECT: ${SSO_POST_LOGIN_REDIRECT:-/api/v1/me}
-      # Empty because the API port is published directly with no proxy in front.
-      # Behind Cloudflare on the dev server: loopback, uniquelocal
-      TRUST_PROXY: ${TRUST_PROXY:-}
-      # Rate limit layer 1: per address, before the token is checked
-      THROTTLE_IP_BURST_TTL_MS: ${THROTTLE_IP_BURST_TTL_MS:-10000}
-      THROTTLE_IP_BURST_LIMIT: ${THROTTLE_IP_BURST_LIMIT:-600}
-      THROTTLE_IP_SUSTAINED_TTL_MS: ${THROTTLE_IP_SUSTAINED_TTL_MS:-60000}
-      THROTTLE_IP_SUSTAINED_LIMIT: ${THROTTLE_IP_SUSTAINED_LIMIT:-3000}
-      # Rate limit layer 2: per verified user, after the token is checked
-      THROTTLE_USER_BURST_TTL_MS: ${THROTTLE_USER_BURST_TTL_MS:-10000}
-      THROTTLE_USER_BURST_LIMIT: ${THROTTLE_USER_BURST_LIMIT:-100}
-      THROTTLE_USER_SUSTAINED_TTL_MS: ${THROTTLE_USER_SUSTAINED_TTL_MS:-60000}
-      THROTTLE_USER_SUSTAINED_LIMIT: ${THROTTLE_USER_SUSTAINED_LIMIT:-600}
-      # Database pool and timeout ceilings
-      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
-      DATABASE_CONNECT_TIMEOUT_MS: ${DATABASE_CONNECT_TIMEOUT_MS:-5000}
-      DATABASE_STATEMENT_TIMEOUT_MS: ${DATABASE_STATEMENT_TIMEOUT_MS:-5000}
-      DATABASE_IDLE_IN_TRANSACTION_TIMEOUT_MS: ${DATABASE_IDLE_IN_TRANSACTION_TIMEOUT_MS:-10000}
+      NODE_ENV: production
+      PORT: 4000
+      TZ: Asia/Bangkok
+      DATABASE_URL: postgresql://lab_booking:lab_booking_local_only@db:5432/lab_booking
+      DATABASE_POOL_MAX: 5
+      CORE_HUB_URL: ${CORE_HUB_URL:-https://csmju2030.jowave.com}
+      CORE_HUB_JWKS_URL: ${CORE_HUB_JWKS_URL:-https://csmju2030.jowave.com/api/v1/.well-known/jwks.json}
+      CORE_HUB_WEB_URL: ${CORE_HUB_WEB_URL:-https://csmju2030.jowave.com}
+      CORE_HUB_ISSUER: core-hub
+      CORE_HUB_AUDIENCE: csmju2030
+      SUBSYSTEM_ID: csmju-lab-booking
+      SUBSYSTEM_NAME: CSMJU Lab Booking
+      SSO_POST_LOGIN_REDIRECT: /
+      # web (Next.js) อยู่หน้า api ใน network ของ compose
+      TRUST_PROXY: ${TRUST_PROXY:-uniquelocal}
+    # ไม่เปิดพอร์ตออกนอก — web ส่ง /api/* และ /auth/* มาให้ (ข้อ 3.1)
+
+  web:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    mem_limit: 384m
+    environment:
+      TZ: Asia/Bangkok
+      SUBSYSTEM_ID: csmju-lab-booking
+      CORE_HUB_WEB_URL: ${CORE_HUB_WEB_URL:-https://csmju2030.jowave.com}
     ports:
-      - '3003:3003'
-    extra_hosts:
-      # Lets the container reach a Core Hub running on the host (Linux support)
-      - 'host.docker.internal:host-gateway'
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "fetch('http://127.0.0.1:3003/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+      # พอร์ต frontend ของทีม — ตรงกับ callback http://localhost:3002/auth/callback ที่ลงทะเบียนไว้
+      - '127.0.0.1:3002:3000'
 
 volumes:
   lab-booking-db-data:
