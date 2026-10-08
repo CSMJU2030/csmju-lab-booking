@@ -14,6 +14,9 @@ import {
 import { api } from "./lib/api";
 import { hhmm, timeRange } from "./lib/format";
 import { canBook, useSession } from "./lib/session";
+import WeeklyTimetable, {
+  type TimetableEntry,
+} from "./components/WeeklyTimetable";
 
 type Room = { id: string; name: string; building: string | null };
 
@@ -29,6 +32,7 @@ type RoomStatus = {
   isOccupied: boolean;
   currentClass: ClassInfo | null;
   nextClass: ClassInfo | null;
+  allSchedules?: TimetableEntry[];
 };
 
 type Load =
@@ -66,6 +70,7 @@ export default function RoomsPage() {
   const me = useSession();
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [query, setQuery] = useState("");
+  const [selectedRoom, setSelectedRoom] = useState("");
 
   const refresh = useCallback(() => {
     setLoad({ state: "loading" });
@@ -197,7 +202,88 @@ export default function RoomsPage() {
           </ul>
         )}
       </section>
+
+      {load.state === "ready" && (
+        <TimetableSection
+          load={load}
+          selectedRoom={selectedRoom}
+          onSelect={setSelectedRoom}
+        />
+      )}
     </>
+  );
+}
+
+const DAY_KEYS = [
+  "SUNDAY",
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
+];
+
+function TimetableSection({
+  load,
+  selectedRoom,
+  onSelect,
+}: {
+  load: Extract<Load, { state: "ready" }>;
+  selectedRoom: string;
+  onSelect: (name: string) => void;
+}) {
+  const names = [...load.status.keys()];
+  if (names.length === 0) return null;
+  const current = names.includes(selectedRoom) ? selectedRoom : names[0];
+  const entries = load.status.get(current)?.allSchedules ?? [];
+  const todayKey =
+    DAY_KEYS[
+      new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }),
+      ).getDay()
+    ];
+
+  return (
+    <section
+      className={`${cardClass} mt-6`}
+      aria-labelledby="timetable-heading"
+    >
+      <div className="flex flex-col gap-4 border-b border-outline-variant/40 px-6 py-5 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2
+            id="timetable-heading"
+            className="font-display text-headline-md text-on-surface"
+          >
+            ตารางการใช้ห้อง
+          </h2>
+          <p className="text-body-md text-on-surface-variant">
+            คาบเรียนประจำสัปดาห์ของแต่ละห้อง
+          </p>
+        </div>
+        <div className="sm:w-64">
+          <label
+            htmlFor="timetable-room"
+            className="mb-1 block text-label-md text-on-surface-variant"
+          >
+            เลือกห้อง
+          </label>
+          <select
+            id="timetable-room"
+            value={current}
+            onChange={(e) => onSelect(e.target.value)}
+            className={inputClass}
+          >
+            {names.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <WeeklyTimetable entries={entries} todayKey={todayKey} />
+    </section>
   );
 }
 
